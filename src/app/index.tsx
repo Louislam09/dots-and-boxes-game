@@ -1,36 +1,39 @@
-import React from "react";
-import { Text, View } from "react-native";
+// app/index.tsx - Entry point (splash/redirect)
 
-import { Link } from "@/tw";
+import { useEffect } from 'react';
+import { View, Text, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../contexts/AuthContext';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
-export default function Page() {
+export default function Index() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading) {
+      // Redirect based on auth state
+      if (isAuthenticated) {
+        router.replace('/home');
+      } else {
+        router.replace('/login');
+      }
+    }
+  }, [isAuthenticated, isLoading, router]);
+
   return (
-    <View className="flex-1">
-      <View className="py-12 md:py-24 lg:py-32 xl:py-48">
-        <View className="px-4 md:px-6">
-          <View className="flex flex-col items-center gap-4 text-center">
-            <Text
-              role="heading"
-              className="text-3xl text-center native:text-5xl font-bold sm:text-4xl md:text-5xl lg:text-6xl font-rounded"
-            >
-              Welcome to Project ACME
-            </Text>
-            <Text className="mx-auto max-w-[700px] text-lg text-center text-gray-500 md:text-xl dark:text-gray-400">
-              Discover and collaborate on acme. Explore our services now.
-            </Text>
-
-            <View className="gap-4">
-              <Link
-                suppressHighlighting
-                className="flex h-9 items-center justify-center overflow-hidden rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-gray-50 web:shadow ios:shadow transition-colors hover:bg-gray-900/90 active:bg-gray-400/90 web:focus-visible:outline-none web:focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50 dark:bg-gray-50 dark:text-gray-900 dark:hover:bg-gray-50/90 dark:focus-visible:ring-gray-300"
-                href="/"
-              >
-                Explore
-              </Link>
-            </View>
-          </View>
+    <View className="flex-1 bg-indigo-600 items-center justify-center">
+      {/* Logo/Branding */}
+      <View className="items-center mb-8">
+        <View className="w-24 h-24 bg-white rounded-3xl items-center justify-center mb-4 shadow-lg">
+          <Text className="text-5xl">🎮</Text>
         </View>
+        <Text className="text-3xl font-bold text-white">Dots & Boxes</Text>
+        <Text className="text-indigo-200 mt-2">Connect. Complete. Conquer.</Text>
       </View>
+
+      {/* Loading indicator */}
+      <LoadingSpinner color="#FFFFFF" />
     </View>
   );
 }

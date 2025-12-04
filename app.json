@@ -1,15 +1,49 @@
 {
   "expo": {
-    "scheme": "acme",
+    "name": "Dots & Boxes",
+    "slug": "dots-and-boxes-game",
+    "scheme": "dotsandboxes",
+    "version": "1.0.0",
+    "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "orientation": "default",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dotsandboxes.game"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#6366F1"
+      },
+      "package": "com.dotsandboxes.game"
+    },
     "web": {
-      "output": "static"
+      "output": "static",
+      "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to set your avatar."
+        }
+      ]
     ],
-    "name": "dots-and-boxes-game",
-    "slug": "dots-and-boxes-game"
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
   }
 }
