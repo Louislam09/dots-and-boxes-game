@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { Button, Input, Toast, useToast } from '../components/ui';
 import { validators } from '../utils/validators';
+import { KeyboardPaddingView } from '@/components/common/keyboard-padding';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function LoginScreen() {
 
     try {
       const result = await login({ email, password });
-      
+
       if (result.success) {
         router.replace('/home');
       } else {
@@ -126,6 +127,7 @@ export default function LoginScreen() {
           </View>
         </View>
       </ScrollView>
+      <KeyboardPaddingView />
 
       <Toast {...toast} onHide={hideToast} />
     </KeyboardAvoidingView>

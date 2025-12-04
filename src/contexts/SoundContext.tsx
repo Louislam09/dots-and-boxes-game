@@ -8,14 +8,17 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { settingsStorage, UserSettings } from '../utils/storage';
+
+// Note: expo-audio's useAudioPlayer hook must be used at component level
+// For a simple sound system, we'll use haptics as primary feedback
+// and can add audio players in specific components when needed
 
 interface SoundContextValue {
   settings: UserSettings;
   updateSettings: (updates: Partial<UserSettings>) => Promise<void>;
-  playSound: (sound: SoundType) => Promise<void>;
+  playSound: (sound: SoundType) => void;
   triggerHaptic: (type: HapticType) => void;
 }
 
@@ -23,16 +26,6 @@ type SoundType = 'move' | 'complete' | 'error' | 'winner' | 'join' | 'click';
 type HapticType = 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error';
 
 const SoundContext = createContext<SoundContextValue | undefined>(undefined);
-
-// Sound file mapping
-const SOUND_FILES: Record<SoundType, string | null> = {
-  move: null, // Will be loaded from assets
-  complete: null,
-  error: null,
-  winner: null,
-  join: null,
-  click: null,
-};
 
 interface SoundProviderProps {
   children: ReactNode;
@@ -45,8 +38,6 @@ export function SoundProvider({ children }: SoundProviderProps) {
     vibrationEnabled: true,
     theme: 'dark',
   });
-  const [sounds, setSounds] = useState<Map<SoundType, Audio.Sound>>(new Map());
-  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load settings on mount
   useEffect(() => {
@@ -57,41 +48,6 @@ export function SoundProvider({ children }: SoundProviderProps) {
     loadSettings();
   }, []);
 
-  // Load sound files
-  useEffect(() => {
-    const loadSounds = async () => {
-      try {
-        // Configure audio mode
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: false,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-        });
-
-        // Note: In a real implementation, you would load actual sound files here
-        // For now, we'll skip this as the sound files don't exist yet
-        // Example:
-        // const { sound: moveSound } = await Audio.Sound.createAsync(
-        //   require('../../assets/sounds/move.mp3')
-        // );
-        // sounds.set('move', moveSound);
-
-        setIsLoaded(true);
-      } catch (error) {
-        console.error('Error loading sounds:', error);
-      }
-    };
-
-    loadSounds();
-
-    // Cleanup sounds on unmount
-    return () => {
-      sounds.forEach((sound) => {
-        sound.unloadAsync();
-      });
-    };
-  }, []);
-
   // Update settings
   const updateSettings = useCallback(async (updates: Partial<UserSettings>) => {
     const newSettings = { ...settings, ...updates };
@@ -99,22 +55,43 @@ export function SoundProvider({ children }: SoundProviderProps) {
     await settingsStorage.updateSettings(updates);
   }, [settings]);
 
-  // Play a sound effect
+  // Play a sound effect using haptics as feedback
+  // Note: For actual audio, use useAudioPlayer hook in components
+  // Example in a component:
+  // const player = useAudioPlayer(require('../assets/sounds/move.mp3'));
+  // player.play();
   const playSound = useCallback(
-    async (type: SoundType) => {
+    (type: SoundType) => {
       if (!settings.soundEnabled) return;
 
+      // Use haptic feedback as audio substitute until sound files are added
       try {
-        const sound = sounds.get(type);
-        if (sound) {
-          await sound.setPositionAsync(0);
-          await sound.playAsync();
+        switch (type) {
+          case 'move':
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            break;
+          case 'complete':
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            break;
+          case 'error':
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            break;
+          case 'winner':
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            break;
+          case 'join':
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            break;
+          case 'click':
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            break;
         }
       } catch (error) {
-        console.error('Error playing sound:', error);
+        // Haptics may not be available on all devices/web
+        console.warn('Sound/Haptic feedback not available:', error);
       }
     },
-    [settings.soundEnabled, sounds]
+    [settings.soundEnabled]
   );
 
   // Trigger haptic feedback
@@ -171,5 +148,11 @@ export function useSound(): SoundContextValue {
   return context;
 }
 
-export default SoundContext;
+// Helper hook for playing sounds with expo-audio in components
+// Usage example in a component:
+//
+// import { useAudioPlayer } from 'expo-audio';
+// const moveSound = useAudioPlayer(require('../assets/sounds/move.mp3'));
+// moveSound.play();
 
+export default SoundContext;

@@ -9,13 +9,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dotsandboxes.game"
+      "bundleIdentifier": "com.louislam09.dotsandboxes"
     },
     "android": {
+      "icon": "./src/assets/images/icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#6366F1"
       },
-      "package": "com.dotsandboxes.game"
+      "package": "com.louislam09.dotsandboxes"
     },
     "web": {
       "output": "static",
@@ -25,7 +26,7 @@
       "expo-router",
       "expo-secure-store",
       [
-        "expo-av",
+        "expo-audio",
         {
           "microphonePermission": false
         }

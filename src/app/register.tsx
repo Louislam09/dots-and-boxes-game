@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { Button, Input, Toast, useToast } from '../components/ui';
 import { validators } from '../utils/validators';
+import { KeyboardPaddingView } from '@/components/common/keyboard-padding';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -74,12 +75,9 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1"
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View className="flex-1 ">
       <ScrollView
-        className="flex-1"
+        className="flex-1 "
         contentContainerStyle={{
           flexGrow: 1,
           paddingTop: insets.top,
@@ -162,7 +160,8 @@ export default function RegisterScreen() {
       </ScrollView>
 
       <Toast {...toast} onHide={hideToast} />
-    </KeyboardAvoidingView>
+      <KeyboardPaddingView />
+    </View>
   );
 }
 

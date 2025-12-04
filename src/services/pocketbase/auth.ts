@@ -50,8 +50,8 @@ export const authService = {
       };
     } catch (error: unknown) {
       const pbError = error as { message?: string; data?: { data?: Record<string, { message: string }> } };
-      console.error('Registration error:', error);
-      
+      console.error('Registration error:', error.originalError);
+
       // Extract error message
       let errorMessage = 'Registration failed. Please try again.';
       if (pbError.data?.data) {
