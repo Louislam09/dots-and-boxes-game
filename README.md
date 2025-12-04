@@ -10,7 +10,7 @@ A real-time multiplayer **Dots and Boxes** game built with React Native (Expo), 
 
 ## 📸 Screenshots
 
-*(Coming soon)*
+_(Coming soon)_
 
 ## ✨ Features
 
@@ -35,12 +35,14 @@ A real-time multiplayer **Dots and Boxes** game built with React Native (Expo), 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/dots-and-boxes-game.git
    cd dots-and-boxes-game
    ```
 
 2. **Install dependencies**
+
    ```bash
    bun install
    # or
@@ -48,19 +50,33 @@ A real-time multiplayer **Dots and Boxes** game built with React Native (Expo), 
    ```
 
 3. **Set up environment variables**
+
+   Create a `.env.local` file in the project root:
+
    ```bash
-   # Create .env file in root
-   EXPO_PUBLIC_POCKETBASE_URL=http://localhost:8090
-   EXPO_PUBLIC_SOCKET_URL=http://localhost:3000
+   # For physical devices, use your local IP or ngrok URLs
+   # Find your IP: Windows (ipconfig) | Mac/Linux (ifconfig)
+
+   # Using local IP:
+   EXPO_PUBLIC_POCKETBASE_URL=http://192.168.x.x:8090
+   EXPO_PUBLIC_SOCKET_URL=http://192.168.x.x:3001
+
+   # Or using ngrok (for remote testing):
+   EXPO_PUBLIC_POCKETBASE_URL=https://your-domain.ngrok-free.app
+   EXPO_PUBLIC_SOCKET_URL=https://your-socket.ngrok-free.app
    ```
 
+   > ⚠️ `localhost` only works on web/simulators, not physical devices!
+
 4. **Set up PocketBase**
+
    - Download PocketBase from [pocketbase.io](https://pocketbase.io/)
    - Run PocketBase: `./pocketbase serve`
    - Import the schema from `server/pocketbase/` (if available)
    - Or manually create collections as defined in `doc/final_design.md`
 
 5. **Start the Socket.io server**
+
    ```bash
    cd server/socket-server
    bun install
@@ -108,14 +124,17 @@ dots-and-boxes-game/
 ## 🎮 How to Play
 
 1. **Create or Join a Room**
+
    - Create a new room and share the 6-character code
    - Or join an existing room using a code
 
 2. **Wait for Players**
+
    - Wait in the lobby until all players join
    - Host can start the game when ready
 
 3. **Take Turns**
+
    - Tap two adjacent dots to draw a line
    - Complete a box by drawing its fourth side
    - Completing a box earns you a point and another turn!
@@ -126,37 +145,41 @@ dots-and-boxes-game/
 
 ## 🛠️ Tech Stack
 
-| Technology | Purpose |
-|------------|---------|
-| React Native | Mobile app framework |
-| Expo | Development platform |
-| Expo Router | File-based navigation |
-| TypeScript | Type safety |
-| NativeWind/Tailwind | Styling |
-| Socket.io | Real-time communication |
-| PocketBase | Backend (Auth, DB) |
-| react-native-svg | Game board graphics |
-| expo-av | Sound effects |
-| expo-haptics | Haptic feedback |
+| Technology          | Purpose                 |
+| ------------------- | ----------------------- |
+| React Native        | Mobile app framework    |
+| Expo                | Development platform    |
+| Expo Router         | File-based navigation   |
+| TypeScript          | Type safety             |
+| NativeWind/Tailwind | Styling                 |
+| Socket.io           | Real-time communication |
+| PocketBase          | Backend (Auth, DB)      |
+| react-native-svg    | Game board graphics     |
+| expo-av             | Sound effects           |
+| expo-haptics        | Haptic feedback         |
 
 ## 📱 Running on Devices
 
 ### iOS Simulator
+
 ```bash
 bun run ios
 ```
 
 ### Android Emulator
+
 ```bash
 bun run android
 ```
 
 ### Web Browser
+
 ```bash
 bun run web
 ```
 
 ### Physical Device
+
 - Install **Expo Go** on your device
 - Scan the QR code from the terminal
 
@@ -164,14 +187,15 @@ bun run web
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable                     | Description           | Default                 |
+| ---------------------------- | --------------------- | ----------------------- |
 | `EXPO_PUBLIC_POCKETBASE_URL` | PocketBase server URL | `http://localhost:8090` |
-| `EXPO_PUBLIC_SOCKET_URL` | Socket.io server URL | `http://localhost:3000` |
+| `EXPO_PUBLIC_SOCKET_URL`     | Socket.io server URL  | `http://localhost:3000` |
 
 ### PocketBase Collections
 
 Refer to `doc/final_design.md` for the complete PocketBase schema including:
+
 - `users` - User accounts & profiles
 - `rooms` - Game rooms
 - `games` - Game history & replays
@@ -193,6 +217,7 @@ bun lint
 ## 📦 Building for Production
 
 ### Expo EAS Build
+
 ```bash
 # Build for iOS
 eas build --platform ios
@@ -202,6 +227,7 @@ eas build --platform android
 ```
 
 ### Web Deployment
+
 ```bash
 npx expo export -p web
 ```

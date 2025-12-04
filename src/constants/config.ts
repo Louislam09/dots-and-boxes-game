@@ -1,9 +1,13 @@
 // constants/config.ts - App configuration
+// 
+// Set these environment variables in your .env.local file:
+//   EXPO_PUBLIC_POCKETBASE_URL=https://your-pocketbase-url.com
+//   EXPO_PUBLIC_SOCKET_URL=https://your-socket-url.com
 
 export const CONFIG = {
-  // API URLs (use environment variables in production)
+  // API URLs - Set via environment variables
   POCKETBASE_URL: process.env.EXPO_PUBLIC_POCKETBASE_URL || 'http://localhost:8090',
-  SOCKET_URL: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3000',
+  SOCKET_URL: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3001',
 
   // App settings
   APP_NAME: 'Dots & Boxes',

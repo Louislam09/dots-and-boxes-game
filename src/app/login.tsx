@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button, Input, Toast, useToast } from '../components/ui';
 import { validators } from '../utils/validators';
 import { KeyboardPaddingView } from '@/components/common/keyboard-padding';
+import { Image } from 'expo-image';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -73,9 +74,15 @@ export default function LoginScreen() {
         <View className="flex-1 px-6 justify-center">
           {/* Header */}
           <View className="items-center mb-10">
-            <View className="w-20 h-20 bg-indigo-600 rounded-2xl items-center justify-center mb-4 shadow-lg">
-              <Text className="text-4xl">🎮</Text>
+            <View className="bg-indigo-600 overflow-hidden rounded-2xl items-center justify-center mb-4">
+              <Image
+                style={{ width: 80, height: 80 }}
+                source={require('@/assets/images/icon.png')}
+              />
             </View>
+            {/* <View className="w-20 h-20 bg-indigo-600 rounded-2xl items-center justify-center mb-4 shadow-lg">
+              <Text className="text-4xl">🎮</Text>
+            </View> */}
             <Text className="text-3xl font-bold text-gray-900">Welcome Back</Text>
             <Text className="text-gray-500 mt-2">Sign in to continue playing</Text>
           </View>

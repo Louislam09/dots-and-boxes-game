@@ -50,6 +50,7 @@ export const authService = {
       };
     } catch (error: unknown) {
       const pbError = error as { message?: string; data?: { data?: Record<string, { message: string }> } };
+      // @ts-ignore
       console.error('Registration error:', error.originalError);
 
       // Extract error message

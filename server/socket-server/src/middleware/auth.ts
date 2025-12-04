@@ -3,7 +3,8 @@
 import type { Socket } from 'socket.io';
 import PocketBase from 'pocketbase';
 
-const POCKETBASE_URL = process.env.POCKETBASE_URL || 'http://localhost:8090';
+// Use your ngrok URL or local IP for PocketBase
+const POCKETBASE_URL = process.env.POCKETBASE_URL || 'https://tick-dynamic-trout.ngrok-free.app';
 
 interface AuthenticatedSocket extends Socket {
   data: {
@@ -35,7 +36,7 @@ export async function authMiddleware(
     // Validate token by attempting to get current user
     try {
       const authData = await pb.collection('users').authRefresh();
-      
+
       socket.data.user = {
         id: authData.record.id,
         username: authData.record.username,

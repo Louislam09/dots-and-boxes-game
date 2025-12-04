@@ -8,8 +8,15 @@ import cors from 'cors';
 import { setupSocketHandlers } from './socket.js';
 import { authMiddleware } from './middleware/auth.js';
 
-const PORT = process.env.PORT || 3000;
-const CORS_ORIGINS = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:8081'];
+const PORT = process.env.PORT || 3001;
+
+// Allow all origins in development (ngrok URLs change)
+const CORS_ORIGINS = process.env.CORS_ORIGINS?.split(',') || [
+  'https://tick-dynamic-trout.ngrok-free.app',
+  'http://localhost:8081',
+  'http://localhost:19006',
+  'http://localhost:8090',
+];
 
 // Create Express app
 const app = express();
