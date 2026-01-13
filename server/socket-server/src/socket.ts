@@ -12,8 +12,27 @@ import {
 } from './game/logic.js';
 import type { RoomState, Player, GameState } from './types/index.js';
 
-const POCKETBASE_URL = process.env.POCKETBASE_URL || 'http://localhost:8090';
+// Use your ngrok URL for PocketBase
+const POCKETBASE_URL = process.env.POCKETBASE_URL || 'https://tick-dynamic-trout.ngrok-free.app';
 const pb = new PocketBase(POCKETBASE_URL);
+
+// Authenticate server with PocketBase (optional - needed if API rules require auth)
+async function initPocketBase() {
+  try {
+    // Use admin credentials or create a service account
+    const adminEmail = process.env.PB_ADMIN_EMAIL;
+    const adminPassword = process.env.PB_ADMIN_PASSWORD;
+
+    if (adminEmail && adminPassword) {
+      await pb.collection('_superusers').authWithPassword(adminEmail, adminPassword);
+      console.log('✅ PocketBase authenticated');
+    }
+  } catch (error) {
+    console.warn('⚠️ PocketBase auth failed - using unauthenticated access');
+  }
+}
+
+initPocketBase();
 
 // In-memory room storage
 const rooms = new Map<string, RoomState>();
@@ -38,7 +57,7 @@ export function setupSocketHandlers(io: Server) {
         if (!room) {
           // Fetch room from PocketBase
           const pbRoom = await pb.collection('rooms').getOne(roomId);
-          
+
           room = {
             code: roomCode,
             roomId,
@@ -330,7 +349,7 @@ export function setupSocketHandlers(io: Server) {
 
     socket.on('rejoin-room', async ({ roomCode, lastMoveId }) => {
       const room = rooms.get(roomCode);
-      
+
       if (!room) {
         socket.emit('rejoin-failed', { reason: 'Room no longer exists' });
         return;
@@ -433,7 +452,7 @@ async function handleAbandon(io: Server, roomCode: string, userId: string) {
 
   // Remove player
   room.players.delete(userId);
-  
+
   if (room.players.size === 0) {
     rooms.delete(roomCode);
   }
@@ -442,7 +461,7 @@ async function handleAbandon(io: Server, roomCode: string, userId: string) {
 async function saveGame(room: RoomState, result: { winner: Player | null; isDraw: boolean; finalScores: Record<string, number> }) {
   try {
     const players = Array.from(room.players.values());
-    
+
     await pb.collection('games').create({
       room: room.roomId,
       players: players.map(p => ({
@@ -469,7 +488,7 @@ async function saveGame(room: RoomState, result: { winner: Player | null; isDraw
     for (const player of players) {
       const isWinner = result.winner?.id === player.id;
       const userData = await pb.collection('users').getOne(player.id);
-      
+
       await pb.collection('users').update(player.id, {
         totalGamesPlayed: userData.totalGamesPlayed + 1,
         totalWins: userData.totalWins + (isWinner ? 1 : 0),

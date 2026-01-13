@@ -1,18 +1,26 @@
-// app/achievements.tsx - Achievements screen
+// app/achievements.tsx - Achievements screen (Clean)
 
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useAuth } from '../contexts/AuthContext';
-import { Card } from '../components/ui';
+import { GlassCard } from '../components/ui';
 import { ACHIEVEMENTS, getAchievementsByCategory } from '../constants/achievements';
+import { COLORS } from '../constants/colors';
 import type { AchievementCategory } from '../types/achievement';
 
-const CATEGORIES: { key: AchievementCategory; label: string; icon: string }[] = [
-  { key: 'games', label: 'Games Played', icon: '🎮' },
-  { key: 'wins', label: 'Victories', icon: '🏆' },
-  { key: 'score', label: 'Score', icon: '⭐' },
-  { key: 'special', label: 'Special', icon: '💎' },
+const CATEGORIES: { key: AchievementCategory; label: string }[] = [
+  { key: 'games', label: 'Games Played' },
+  { key: 'wins', label: 'Victories' },
+  { key: 'score', label: 'Score' },
+  { key: 'special', label: 'Special' },
 ];
 
 export default function AchievementsScreen() {
@@ -20,7 +28,17 @@ export default function AchievementsScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
-  // Calculate unlocked achievements based on user stats
+  // Animation values
+  const contentOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    contentOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
+  }, []);
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
+
   const isUnlocked = (key: string): boolean => {
     if (!user) return false;
     
@@ -35,7 +53,6 @@ export default function AchievementsScreen() {
       case 'score':
         return user.totalScore >= achievement.requirement;
       case 'special':
-        // Special achievements need individual tracking
         if (key === 'streak_3') return user.bestStreak >= 3;
         if (key === 'streak_5') return user.bestStreak >= 5;
         if (key === 'streak_10') return user.bestStreak >= 10;
@@ -80,110 +97,267 @@ export default function AchievementsScreen() {
 
   const totalAchievements = Object.keys(ACHIEVEMENTS).length;
   const unlockedCount = Object.keys(ACHIEVEMENTS).filter(isUnlocked).length;
+  const progressPercentage = (unlockedCount / totalAchievements) * 100;
 
   return (
-    <View
-      className="flex-1 bg-gray-50"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-    >
+    <View style={styles.container}>
       {/* Header */}
-      <View className="flex-row items-center px-4 py-3">
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
           onPress={() => router.back()}
-          className="w-10 h-10 bg-white rounded-full items-center justify-center mr-3"
+          style={styles.backButton}
         >
-          <Text className="text-lg">←</Text>
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text className="text-2xl font-bold text-gray-900">🏅 Achievements</Text>
+        <Text style={styles.headerTitle}>Achievements</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      {/* Progress Summary */}
-      <View className="px-4 mb-4">
-        <Card variant="elevated">
-          <View className="items-center">
-            <Text className="text-4xl font-bold text-indigo-600">
-              {unlockedCount}/{totalAchievements}
-            </Text>
-            <Text className="text-gray-500 mt-1">Achievements Unlocked</Text>
-            <View className="w-full h-2 bg-gray-200 rounded-full mt-3 overflow-hidden">
-              <View
-                className="h-full bg-indigo-600 rounded-full"
-                style={{ width: `${(unlockedCount / totalAchievements) * 100}%` }}
-              />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
+      >
+        <Animated.View style={contentAnimatedStyle}>
+          {/* Progress Summary */}
+          <GlassCard variant="elevated" style={styles.summaryCard}>
+            <View style={styles.summaryTop}>
+              <Text style={styles.summaryCount}>{unlockedCount}</Text>
+              <Text style={styles.summaryTotal}>/ {totalAchievements}</Text>
             </View>
-          </View>
-        </Card>
-      </View>
+            <Text style={styles.summaryLabel}>Achievements Unlocked</Text>
+            <View style={styles.summaryBar}>
+              <View style={[styles.summaryBarFill, { width: `${progressPercentage}%` }]} />
+            </View>
+          </GlassCard>
 
-      {/* Achievements by Category */}
-      <ScrollView className="flex-1 px-4">
-        {CATEGORIES.map((category) => {
-          const achievements = getAchievementsByCategory(category.key);
+          {/* Achievements by Category */}
+          {CATEGORIES.map((category) => {
+            const achievements = getAchievementsByCategory(category.key);
 
-          return (
-            <View key={category.key} className="mb-6">
-              <Text className="text-lg font-bold text-gray-900 mb-3">
-                {category.icon} {category.label}
-              </Text>
+            return (
+              <View key={category.key} style={styles.categorySection}>
+                <Text style={styles.categoryTitle}>{category.label}</Text>
 
-              {achievements.map((achievement) => {
-                const unlocked = isUnlocked(achievement.key);
-                const progress = getProgress(achievement.key);
+                {achievements.map((achievement) => {
+                  const unlocked = isUnlocked(achievement.key);
+                  const progress = getProgress(achievement.key);
 
-                return (
-                  <Card
-                    key={achievement.key}
-                    className={`mb-2 ${unlocked ? '' : 'opacity-60'}`}
-                  >
-                    <View className="flex-row items-center">
-                      <View
-                        className={`
-                          w-12 h-12 rounded-xl items-center justify-center mr-3
-                          ${unlocked ? 'bg-indigo-100' : 'bg-gray-200'}
-                        `}
-                      >
-                        <Text className="text-2xl">
-                          {unlocked ? achievement.icon : '🔒'}
-                        </Text>
-                      </View>
-                      <View className="flex-1">
-                        <Text className="font-semibold text-gray-900">
-                          {achievement.name}
-                        </Text>
-                        <Text className="text-gray-500 text-sm">
-                          {achievement.description}
-                        </Text>
-                        {!unlocked && (
-                          <View className="mt-2">
-                            <View className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <View
-                                className="h-full bg-indigo-400 rounded-full"
-                                style={{ width: `${progress.percentage}%` }}
-                              />
+                  return (
+                    <GlassCard
+                      key={achievement.key}
+                      style={[
+                        styles.achievementCard,
+                        unlocked && styles.achievementCardUnlocked,
+                      ]}
+                    >
+                      <View style={styles.achievementContent}>
+                        <View style={[styles.achievementIcon, unlocked && styles.achievementIconUnlocked]}>
+                          <Text style={styles.achievementEmoji}>
+                            {unlocked ? achievement.icon : '🔒'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.achievementInfo}>
+                          <Text style={[styles.achievementName, !unlocked && styles.achievementNameLocked]}>
+                            {achievement.name}
+                          </Text>
+                          <Text style={styles.achievementDescription}>
+                            {achievement.description}
+                          </Text>
+
+                          {!unlocked && (
+                            <View style={styles.progressContainer}>
+                              <View style={styles.progressBar}>
+                                <View
+                                  style={[styles.progressFill, { width: `${progress.percentage}%` }]}
+                                />
+                              </View>
+                              <Text style={styles.progressText}>
+                                {progress.current}/{progress.target}
+                              </Text>
                             </View>
-                            <Text className="text-xs text-gray-400 mt-1">
-                              {progress.current} / {progress.target}
-                            </Text>
+                          )}
+                        </View>
+
+                        {unlocked && (
+                          <View style={styles.unlockedBadge}>
+                            <Text style={styles.unlockedCheck}>✓</Text>
                           </View>
                         )}
                       </View>
-                      {unlocked && (
-                        <View className="items-end">
-                          <Text className="text-emerald-500 font-bold">✓</Text>
-                          <Text className="text-xs text-indigo-600">
-                            +{achievement.experienceReward} XP
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </Card>
-                );
-              })}
-            </View>
-          );
-        })}
+                    </GlassCard>
+                  );
+                })}
+              </View>
+            );
+          })}
+        </Animated.View>
       </ScrollView>
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    fontSize: 20,
+    color: COLORS.text.primary,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  summaryCard: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginBottom: 24,
+  },
+  summaryTop: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 4,
+  },
+  summaryCount: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: COLORS.accent.primary,
+  },
+  summaryTotal: {
+    fontSize: 18,
+    color: COLORS.text.secondary,
+    marginLeft: 4,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+    marginBottom: 12,
+  },
+  summaryBar: {
+    width: '100%',
+    height: 6,
+    backgroundColor: COLORS.glass.background,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  summaryBarFill: {
+    height: '100%',
+    backgroundColor: COLORS.accent.primary,
+    borderRadius: 3,
+  },
+  categorySection: {
+    marginBottom: 24,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: 12,
+  },
+  achievementCard: {
+    marginBottom: 8,
+    padding: 12,
+  },
+  achievementCardUnlocked: {
+    borderColor: COLORS.accent.primary,
+  },
+  achievementContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  achievementIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.glass.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  achievementIconUnlocked: {
+    backgroundColor: 'rgba(0, 217, 255, 0.15)',
+  },
+  achievementEmoji: {
+    fontSize: 20,
+  },
+  achievementInfo: {
+    flex: 1,
+  },
+  achievementName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: 2,
+  },
+  achievementNameLocked: {
+    color: COLORS.text.secondary,
+  },
+  achievementDescription: {
+    fontSize: 12,
+    color: COLORS.text.muted,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  progressBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: COLORS.glass.background,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginRight: 8,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.accent.primary,
+    borderRadius: 2,
+  },
+  progressText: {
+    fontSize: 11,
+    color: COLORS.text.muted,
+  },
+  unlockedBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unlockedCheck: {
+    fontSize: 14,
+    color: COLORS.status.success,
+    fontWeight: '700',
+  },
+});

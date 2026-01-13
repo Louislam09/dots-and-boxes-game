@@ -1,91 +1,99 @@
-// constants/colors.ts - Theme colors
+// constants/colors.ts - Dark Gaming Theme Design System
 
 export const COLORS = {
-  // Primary palette
-  primary: {
-    DEFAULT: '#6366F1', // Indigo
-    light: '#818CF8',
-    dark: '#4F46E5',
-    contrast: '#FFFFFF',
+  // Background gradient colors
+  background: {
+    primary: '#0A0E27',
+    secondary: '#1A1F3C',
+    tertiary: '#0F1629',
   },
 
-  // Secondary palette
-  secondary: {
-    DEFAULT: '#10B981', // Emerald
-    light: '#34D399',
-    dark: '#059669',
-    contrast: '#FFFFFF',
+  // Glassmorphism
+  glass: {
+    background: 'rgba(255, 255, 255, 0.05)',
+    backgroundLight: 'rgba(255, 255, 255, 0.08)',
+    backgroundHover: 'rgba(255, 255, 255, 0.12)',
+    border: 'rgba(255, 255, 255, 0.1)',
+    borderLight: 'rgba(255, 255, 255, 0.15)',
   },
 
-  // Accent palette
+  // Accent colors
   accent: {
-    DEFAULT: '#F59E0B', // Amber
-    light: '#FBBF24',
-    dark: '#D97706',
-    contrast: '#000000',
+    primary: '#00D9FF', // Electric cyan
+    primaryLight: '#33E4FF',
+    primaryDark: '#00B8D9',
+    secondary: '#A855F7', // Neon purple
+    secondaryLight: '#C084FC',
+    secondaryDark: '#9333EA',
+    tertiary: '#F472B6', // Pink
   },
 
   // Player colors
   players: {
-    player1: '#E63946', // Red
+    player1: '#E63946', // Coral Red
     player2: '#2A9D8F', // Teal
-    player3: '#E9C46A', // Yellow
-  },
-
-  // Game elements
-  game: {
-    dot: '#374151', // Gray-700
-    dotActive: '#6366F1', // Primary
-    line: '#9CA3AF', // Gray-400
-    lineHover: '#6366F1', // Primary
-    square: {
-      player1: 'rgba(230, 57, 70, 0.3)',
-      player2: 'rgba(42, 157, 143, 0.3)',
-      player3: 'rgba(233, 196, 106, 0.3)',
-    },
-    board: '#F9FAFB', // Gray-50
-    boardBorder: '#E5E7EB', // Gray-200
-  },
-
-  // UI Colors
-  ui: {
-    background: '#FFFFFF',
-    backgroundSecondary: '#F9FAFB',
-    surface: '#FFFFFF',
-    surfaceSecondary: '#F3F4F6',
-    border: '#E5E7EB',
-    borderLight: '#F3F4F6',
-    text: '#111827',
-    textSecondary: '#6B7280',
-    textMuted: '#9CA3AF',
-    disabled: '#D1D5DB',
+    player3: '#E9C46A', // Gold
   },
 
   // Status colors
   status: {
     success: '#10B981',
+    successLight: '#34D399',
     warning: '#F59E0B',
-    error: '#EF4444',
+    warningLight: '#FBBF24',
+    error: '#F43F5E',
+    errorLight: '#FB7185',
     info: '#3B82F6',
+    infoLight: '#60A5FA',
   },
 
-  // Dark theme overrides
-  dark: {
-    background: '#0F172A',
-    backgroundSecondary: '#1E293B',
-    surface: '#1E293B',
-    surfaceSecondary: '#334155',
-    border: '#334155',
-    borderLight: '#475569',
-    text: '#F9FAFB',
-    textSecondary: '#94A3B8',
-    textMuted: '#64748B',
+  // Text colors
+  text: {
+    primary: '#FFFFFF',
+    secondary: '#94A3B8',
+    muted: '#64748B',
     disabled: '#475569',
-    game: {
-      dot: '#E5E7EB',
-      board: '#1E293B',
-      boardBorder: '#334155',
+    accent: '#00D9FF',
+    gradient: 'linear-gradient(90deg, #00D9FF, #A855F7)',
+  },
+
+  // Game elements
+  game: {
+    dot: '#E5E7EB',
+    dotActive: '#00D9FF',
+    dotHover: '#00D9FF',
+    line: '#94A3B8',
+    lineActive: '#00D9FF',
+    board: 'rgba(255, 255, 255, 0.03)',
+    boardBorder: 'rgba(255, 255, 255, 0.1)',
+    square: {
+      player1: 'rgba(230, 57, 70, 0.4)',
+      player2: 'rgba(42, 157, 143, 0.4)',
+      player3: 'rgba(233, 196, 106, 0.4)',
     },
+  },
+
+  // UI specifics
+  ui: {
+    cardBackground: 'rgba(255, 255, 255, 0.05)',
+    cardBorder: 'rgba(255, 255, 255, 0.1)',
+    inputBackground: 'rgba(255, 255, 255, 0.05)',
+    inputBorder: 'rgba(255, 255, 255, 0.15)',
+    inputFocusBorder: '#00D9FF',
+    buttonPrimary: '#00D9FF',
+    buttonSecondary: '#A855F7',
+    divider: 'rgba(255, 255, 255, 0.1)',
+  },
+
+  // Glow effects (for shadow/glow styling)
+  glow: {
+    primary: '#00D9FF',
+    secondary: '#A855F7',
+    success: '#10B981',
+    error: '#F43F5E',
+    player1: '#E63946',
+    player2: '#2A9D8F',
+    player3: '#E9C46A',
   },
 } as const;
 
@@ -105,3 +113,8 @@ export function getSquareFillColor(index: number): string {
   return fills[index % fills.length];
 }
 
+// Helper to get glow color by player index
+export function getPlayerGlowColor(index: number): string {
+  const glows = [COLORS.glow.player1, COLORS.glow.player2, COLORS.glow.player3];
+  return glows[index % glows.length];
+}

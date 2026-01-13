@@ -1,4 +1,4 @@
-// components/ui/Button.tsx - Reusable button component (Dark Theme)
+// components/ui/GlowButton.tsx - Clean button (no glow)
 
 import React from 'react';
 import {
@@ -15,10 +15,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { COLORS } from '../../constants/colors';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-type ButtonSize = 'sm' | 'md' | 'lg';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
+type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
 
-interface ButtonProps {
+interface GlowButtonProps {
   title: string;
   onPress: () => void;
   variant?: ButtonVariant;
@@ -28,13 +28,13 @@ interface ButtonProps {
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
-  className?: string;
-  textClassName?: string;
+  glow?: boolean;
+  pulse?: boolean;
 }
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-export function Button({
+export function GlowButton({
   title,
   onPress,
   variant = 'primary',
@@ -44,7 +44,7 @@ export function Button({
   fullWidth = false,
   icon,
   iconPosition = 'left',
-}: ButtonProps) {
+}: GlowButtonProps) {
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
@@ -61,64 +61,65 @@ export function Button({
 
   const isDisabled = disabled || loading;
 
-  const getVariantStyle = () => {
+  const getVariantColors = () => {
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: COLORS.accent.primary,
-          borderWidth: 0,
-          textColor: '#0A0E27',
+          bg: COLORS.accent.primary,
+          text: '#0A0E27',
         };
       case 'secondary':
         return {
-          backgroundColor: COLORS.accent.secondary,
-          borderWidth: 0,
-          textColor: '#FFFFFF',
+          bg: COLORS.accent.secondary,
+          text: '#FFFFFF',
         };
       case 'outline':
         return {
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          borderColor: COLORS.accent.primary,
-          textColor: COLORS.accent.primary,
+          bg: 'transparent',
+          text: COLORS.accent.primary,
+          border: COLORS.accent.primary,
         };
       case 'ghost':
         return {
-          backgroundColor: COLORS.glass.background,
-          borderWidth: 1,
-          borderColor: COLORS.glass.border,
-          textColor: COLORS.text.secondary,
+          bg: COLORS.glass.background,
+          text: COLORS.text.secondary,
+          border: COLORS.glass.border,
         };
       case 'danger':
         return {
-          backgroundColor: COLORS.status.error,
-          borderWidth: 0,
-          textColor: '#FFFFFF',
+          bg: COLORS.status.error,
+          text: '#FFFFFF',
+        };
+      case 'success':
+        return {
+          bg: COLORS.status.success,
+          text: '#FFFFFF',
         };
       default:
         return {
-          backgroundColor: COLORS.accent.primary,
-          borderWidth: 0,
-          textColor: '#0A0E27',
+          bg: COLORS.accent.primary,
+          text: '#0A0E27',
         };
     }
   };
 
-  const getSizeStyle = () => {
+  const getSizeStyles = () => {
     switch (size) {
       case 'sm':
-        return { paddingVertical: 8, paddingHorizontal: 16, fontSize: 14, borderRadius: 10 };
+        return { paddingVertical: 10, paddingHorizontal: 16, fontSize: 14, borderRadius: 10 };
       case 'md':
-        return { paddingVertical: 12, paddingHorizontal: 20, fontSize: 16, borderRadius: 12 };
+        return { paddingVertical: 14, paddingHorizontal: 20, fontSize: 16, borderRadius: 12 };
       case 'lg':
-        return { paddingVertical: 16, paddingHorizontal: 24, fontSize: 18, borderRadius: 14 };
+        return { paddingVertical: 16, paddingHorizontal: 24, fontSize: 17, borderRadius: 14 };
+      case 'xl':
+        return { paddingVertical: 18, paddingHorizontal: 28, fontSize: 18, borderRadius: 14 };
       default:
-        return { paddingVertical: 12, paddingHorizontal: 20, fontSize: 16, borderRadius: 12 };
+        return { paddingVertical: 14, paddingHorizontal: 20, fontSize: 16, borderRadius: 12 };
     }
   };
 
-  const variantStyle = getVariantStyle();
-  const sizeStyle = getSizeStyle();
+  const colors = getVariantColors();
+  const sizeStyles = getSizeStyles();
 
   return (
     <AnimatedTouchable
@@ -126,16 +127,16 @@ export function Button({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={isDisabled}
-      activeOpacity={0.9}
+      activeOpacity={0.8}
       style={[
         styles.button,
         {
-          backgroundColor: variantStyle.backgroundColor,
-          borderWidth: variantStyle.borderWidth,
-          borderColor: variantStyle.borderColor,
-          paddingVertical: sizeStyle.paddingVertical,
-          paddingHorizontal: sizeStyle.paddingHorizontal,
-          borderRadius: sizeStyle.borderRadius,
+          backgroundColor: colors.bg,
+          paddingVertical: sizeStyles.paddingVertical,
+          paddingHorizontal: sizeStyles.paddingHorizontal,
+          borderRadius: sizeStyles.borderRadius,
+          borderWidth: colors.border ? 1.5 : 0,
+          borderColor: colors.border,
           opacity: isDisabled ? 0.5 : 1,
         },
         fullWidth && styles.fullWidth,
@@ -143,7 +144,7 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variantStyle.textColor} size="small" />
+        <ActivityIndicator color={colors.text} size="small" />
       ) : (
         <View style={styles.content}>
           {icon && iconPosition === 'left' && (
@@ -153,8 +154,8 @@ export function Button({
             style={[
               styles.text,
               {
-                color: variantStyle.textColor,
-                fontSize: sizeStyle.fontSize,
+                color: colors.text,
+                fontSize: sizeStyles.fontSize,
               },
             ]}
           >
@@ -193,4 +194,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Button;
+export default GlowButton;

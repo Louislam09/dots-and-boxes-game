@@ -1,7 +1,14 @@
-// components/ui/LoadingSpinner.tsx - Loading indicator component
+// components/ui/LoadingSpinner.tsx - Loading spinner (Dark Theme)
 
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useEffect } from 'react';
 import { COLORS } from '../../constants/colors';
 
 interface LoadingSpinnerProps {
@@ -13,22 +20,41 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({
   size = 'large',
-  color = COLORS.primary.DEFAULT,
+  color = COLORS.accent.primary,
   message,
   fullScreen = false,
 }: LoadingSpinnerProps) {
+  const rotation = useSharedValue(0);
+
+  useEffect(() => {
+    rotation.value = withRepeat(
+      withTiming(360, { duration: 1500 }),
+      -1,
+      false
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
   const content = (
-    <View className="items-center justify-center">
-      <ActivityIndicator size={size} color={color} />
+    <View style={styles.container}>
+      <View style={styles.spinnerContainer}>
+        <Animated.View style={[styles.ring, { borderColor: color }, animatedStyle]}>
+          <View style={[styles.ringHighlight, { backgroundColor: color }]} />
+        </Animated.View>
+        <ActivityIndicator size={size} color={color} style={styles.indicator} />
+      </View>
       {message && (
-        <Text className="mt-3 text-gray-600 text-center">{message}</Text>
+        <Text style={styles.message}>{message}</Text>
       )}
     </View>
   );
 
   if (fullScreen) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={styles.fullScreen}>
         {content}
       </View>
     );
@@ -37,26 +63,50 @@ export function LoadingSpinner({
   return content;
 }
 
-// Loading overlay for blocking operations
-interface LoadingOverlayProps {
-  visible: boolean;
-  message?: string;
-}
-
-export function LoadingOverlay({ visible, message }: LoadingOverlayProps) {
-  if (!visible) return null;
-
-  return (
-    <View className="absolute inset-0 bg-black/50 items-center justify-center z-50">
-      <View className="bg-white rounded-2xl px-8 py-6 items-center">
-        <ActivityIndicator size="large" color={COLORS.primary.DEFAULT} />
-        {message && (
-          <Text className="mt-3 text-gray-700 font-medium">{message}</Text>
-        )}
-      </View>
-    </View>
-  );
-}
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  fullScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background.primary,
+  },
+  spinnerContainer: {
+    width: 60,
+    height: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ring: {
+    position: 'absolute',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 3,
+    borderColor: COLORS.accent.primary,
+    opacity: 0.3,
+  },
+  ringHighlight: {
+    position: 'absolute',
+    top: -3,
+    left: 20,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.accent.primary,
+  },
+  indicator: {
+    position: 'absolute',
+  },
+  message: {
+    marginTop: 16,
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+});
 
 export default LoadingSpinner;
-

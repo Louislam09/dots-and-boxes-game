@@ -6,7 +6,7 @@
 
 export const CONFIG = {
   // API URLs - Set via environment variables
-  POCKETBASE_URL: process.env.EXPO_PUBLIC_POCKETBASE_URL || 'http://localhost:8090',
+  POCKETBASE_URL: process.env.EXPO_PUBLIC_POCKETBASE_URL || 'https://tick-dynamic-trout.ngrok-free.app',
   SOCKET_URL: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3001',
 
   // App settings

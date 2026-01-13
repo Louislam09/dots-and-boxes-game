@@ -1,13 +1,19 @@
-// app/login.tsx - Login screen
+// app/login.tsx - Login screen (Clean)
 
-import { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useAuth } from '../contexts/AuthContext';
-import { Button, Input, Toast, useToast } from '../components/ui';
+import { Input, Toast, useToast, GlassCard, GlowButton } from '../components/ui';
 import { validators } from '../utils/validators';
-import { KeyboardPaddingView } from '@/components/common/keyboard-padding';
+import { COLORS } from '../constants/colors';
 import { Image } from 'expo-image';
 
 export default function LoginScreen() {
@@ -21,8 +27,21 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
+  // Animation values
+  const contentOpacity = useSharedValue(0);
+  const contentTranslate = useSharedValue(20);
+
+  useEffect(() => {
+    contentOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
+    contentTranslate.value = withDelay(100, withTiming(0, { duration: 400 }));
+  }, []);
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslate.value }],
+  }));
+
   const handleLogin = async () => {
-    // Validate
     const newErrors: typeof errors = {};
 
     const emailValidation = validators.email(email);
@@ -59,36 +78,35 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1"
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom + 20,
-        }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + 60,
+            paddingBottom: insets.bottom + 40,
+          },
+        ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View className="flex-1 px-6 justify-center">
+        <Animated.View style={contentAnimatedStyle}>
           {/* Header */}
-          <View className="items-center mb-10">
-            <View className="bg-indigo-600 overflow-hidden rounded-2xl items-center justify-center mb-4">
+          <View style={styles.header}>
+            <View style={styles.logoContainer}>
               <Image
-                style={{ width: 80, height: 80 }}
+                style={styles.logoImage}
                 source={require('@/assets/images/icon.png')}
               />
             </View>
-            {/* <View className="w-20 h-20 bg-indigo-600 rounded-2xl items-center justify-center mb-4 shadow-lg">
-              <Text className="text-4xl">🎮</Text>
-            </View> */}
-            <Text className="text-3xl font-bold text-gray-900">Welcome Back</Text>
-            <Text className="text-gray-500 mt-2">Sign in to continue playing</Text>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to continue your journey</Text>
           </View>
 
           {/* Form */}
-          <View className="bg-white rounded-3xl p-6 shadow-sm">
+          <GlassCard variant="elevated" style={styles.formCard}>
             <Input
               label="Email"
               placeholder="Enter your email"
@@ -111,33 +129,94 @@ export default function LoginScreen() {
             />
 
             <Link href="/forgot-password" asChild>
-              <Text className="text-right text-indigo-600 font-medium mb-4">
+              <Text style={styles.forgotPassword}>
                 Forgot Password?
               </Text>
             </Link>
 
-            <Button
+            <GlowButton
               title="Sign In"
               onPress={handleLogin}
               loading={isLoading}
               fullWidth
               size="lg"
             />
-          </View>
+          </GlassCard>
 
           {/* Footer */}
-          <View className="flex-row justify-center mt-6">
-            <Text className="text-gray-600">Don't have an account? </Text>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
             <Link href="/register" asChild>
-              <Text className="text-indigo-600 font-semibold">Sign Up</Text>
+              <Text style={styles.footerLink}>Sign Up</Text>
             </Link>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
-      <KeyboardPaddingView />
 
       <Toast {...toast} onHide={hideToast} />
     </KeyboardAvoidingView>
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoContainer: {
+    marginBottom: 24,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: COLORS.text.secondary,
+  },
+  formCard: {
+    marginBottom: 24,
+  },
+  forgotPassword: {
+    textAlign: 'right',
+    color: COLORS.accent.primary,
+    fontWeight: '500',
+    marginBottom: 20,
+    fontSize: 14,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    color: COLORS.text.secondary,
+    fontSize: 15,
+  },
+  footerLink: {
+    color: COLORS.accent.primary,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+});

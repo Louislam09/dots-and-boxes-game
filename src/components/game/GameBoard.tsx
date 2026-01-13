@@ -1,12 +1,13 @@
-// components/game/GameBoard.tsx - Main game board component
+// components/game/GameBoard.tsx - Main game board component (Dark Gaming Theme)
 
 import React, { useMemo } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Dimensions, StyleSheet } from 'react-native';
 import Svg from 'react-native-svg';
 import { Dot } from './Dot';
 import { Line, PreviewLine } from './Line';
 import { Square } from './Square';
 import { GAME_CONFIG } from '../../constants/game';
+import { COLORS } from '../../constants/colors';
 import { useGame } from '../../contexts/GameContext';
 import type { Dot as DotType } from '../../types/game';
 
@@ -31,12 +32,11 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
     const adjacent: DotType[] = [];
     const { dots } = gameState;
 
-    // Check all 4 directions
     const directions = [
-      { row: -1, col: 0 }, // top
-      { row: 1, col: 0 }, // bottom
-      { row: 0, col: -1 }, // left
-      { row: 0, col: 1 }, // right
+      { row: -1, col: 0 },
+      { row: 1, col: 0 },
+      { row: 0, col: -1 },
+      { row: 0, col: 1 },
     ];
 
     for (const dir of directions) {
@@ -52,7 +52,6 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
         const adjacentId = newRow * GRID_SIZE + newCol;
         const adjacentDot = dots[adjacentId];
 
-        // Only include if not already connected
         if (adjacentDot && !selectedDot.connectedTo.includes(adjacentId)) {
           adjacent.push(adjacentDot);
         }
@@ -65,12 +64,13 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
   if (!gameState) {
     return (
       <View
-        style={{
-          width: size,
-          height: size,
-          backgroundColor: '#F9FAFB',
-          borderRadius: 16,
-        }}
+        style={[
+          styles.container,
+          {
+            width: size,
+            height: size,
+          },
+        ]}
       />
     );
   }
@@ -80,21 +80,22 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
 
   return (
     <View
-      style={{
-        width: size,
-        height: size,
-        backgroundColor: '#F9FAFB',
-        borderRadius: 16,
-        borderWidth: 2,
-        borderColor: '#E5E7EB',
-        overflow: 'hidden',
-      }}
+      style={[
+        styles.container,
+        {
+          width: size,
+          height: size,
+        },
+      ]}
     >
+      {/* Grid pattern background */}
+      <View style={styles.gridPattern} />
+
       {/* SVG Layer for lines and squares */}
       <Svg
         width={size}
         height={size}
-        style={{ position: 'absolute' }}
+        style={StyleSheet.absoluteFill}
       >
         {/* Completed squares */}
         {squares.map((square) => (
@@ -141,5 +142,19 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
   );
 }
 
-export default GameBoard;
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: COLORS.game.board,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.game.boardBorder,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  gridPattern: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.5,
+  },
+});
 
+export default GameBoard;

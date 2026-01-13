@@ -1,9 +1,15 @@
-// app/game/[code].tsx - Active game screen
+// app/game/[code].tsx - Active game screen (Clean)
 
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, BackHandler, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, BackHandler, Dimensions, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useGame } from '../../contexts/GameContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { useSound } from '../../contexts/SoundContext';
@@ -11,6 +17,7 @@ import { roomService } from '../../services/pocketbase';
 import { GameBoard, ScoreBoard, TurnBanner, GameOverModal } from '../../components/game';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { COLORS } from '../../constants/colors';
 
 export default function GameScreen() {
   const router = useRouter();
@@ -23,7 +30,18 @@ export default function GameScreen() {
 
   const [showGameOver, setShowGameOver] = useState(false);
   const screenWidth = Dimensions.get('window').width;
-  const boardSize = Math.min(screenWidth - 32, 400);
+  const boardSize = Math.min(screenWidth - 32, 380);
+
+  // Animation values
+  const contentOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    contentOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
+  }, []);
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
 
   // Show game over modal when game finishes
   useEffect(() => {
@@ -55,7 +73,7 @@ export default function GameScreen() {
 
   if (!gameState) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <LoadingSpinner message="Loading game..." />
       </View>
     );
@@ -63,49 +81,55 @@ export default function GameScreen() {
 
   return (
     <View
-      className="flex-1 bg-gray-50"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
     >
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3">
-        <TouchableOpacity
-          onPress={handleLeave}
-          className="w-10 h-10 bg-white rounded-full items-center justify-center"
-        >
-          <Text>←</Text>
-        </TouchableOpacity>
-        
-        <View className="flex-row items-center">
-          <Text className="text-gray-500 mr-2">Room:</Text>
-          <Text className="font-bold text-gray-900">{code}</Text>
+      <Animated.View style={[styles.content, contentAnimatedStyle]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={handleLeave}
+            style={styles.backButton}
+          >
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.roomBadge}>
+            <Text style={styles.roomLabel}>Room</Text>
+            <Text style={styles.roomCode}>{code}</Text>
+          </View>
+
+          <View style={styles.headerSpacer} />
         </View>
 
-        <View className="w-10" />
-      </View>
+        {/* Turn Banner */}
+        <View style={styles.turnSection}>
+          <TurnBanner />
+        </View>
 
-      {/* Turn Banner */}
-      <View className="px-4 mb-4">
-        <TurnBanner />
-      </View>
+        {/* Score Board */}
+        <View style={styles.scoreSection}>
+          <ScoreBoard />
+        </View>
 
-      {/* Score Board */}
-      <View className="px-4 mb-4">
-        <ScoreBoard />
-      </View>
+        {/* Game Board */}
+        <View style={styles.boardSection}>
+          <View style={styles.boardWrapper}>
+            <GameBoard size={boardSize} />
+          </View>
+        </View>
 
-      {/* Game Board */}
-      <View className="flex-1 items-center justify-center px-4">
-        <GameBoard size={boardSize} />
-      </View>
-
-      {/* Helper Text */}
-      <View className="px-4 py-4">
-        <Text className="text-center text-gray-500 text-sm">
-          {gameState.status === 'playing'
-            ? 'Tap two adjacent dots to draw a line'
-            : 'Waiting for game to start...'}
-        </Text>
-      </View>
+        {/* Helper Text */}
+        <View style={styles.helperSection}>
+          <Text style={styles.helperText}>
+            {gameState.status === 'playing'
+              ? 'Tap two adjacent dots to draw a line'
+              : 'Waiting for game to start...'}
+          </Text>
+        </View>
+      </Animated.View>
 
       {/* Game Over Modal */}
       <GameOverModal
@@ -119,3 +143,93 @@ export default function GameScreen() {
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  content: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    fontSize: 20,
+    color: COLORS.text.primary,
+  },
+  roomBadge: {
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  roomLabel: {
+    fontSize: 12,
+    color: COLORS.text.muted,
+  },
+  roomCode: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.accent.primary,
+    letterSpacing: 1,
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  turnSection: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  scoreSection: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  boardSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  boardWrapper: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+  },
+  helperSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  helperText: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: COLORS.text.muted,
+  },
+});

@@ -1,4 +1,4 @@
-// components/ui/Input.tsx - Reusable input component
+// components/ui/Input.tsx - Styled input component (Dark Theme)
 
 import React, { useState } from 'react';
 import {
@@ -6,94 +6,178 @@ import {
   TextInput,
   Text,
   TouchableOpacity,
+  StyleSheet,
   TextInputProps,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  useSharedValue,
+  interpolateColor,
+} from 'react-native-reanimated';
+import { COLORS } from '../../constants/colors';
 
-interface InputProps extends Omit<TextInputProps, 'className'> {
+interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   hint?: string;
+  isPassword?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
-  containerClassName?: string;
   inputClassName?: string;
-  isPassword?: boolean;
 }
+
+const AnimatedView = Animated.createAnimatedComponent(View);
 
 export function Input({
   label,
   error,
   hint,
+  isPassword = false,
   leftIcon,
   rightIcon,
-  containerClassName = '',
-  inputClassName = '',
-  isPassword = false,
-  secureTextEntry,
+  inputClassName,
   ...props
 }: InputProps) {
+  const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const hasError = !!error;
+  const focusValue = useSharedValue(0);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    focusValue.value = withTiming(1, { duration: 200 });
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    focusValue.value = withTiming(0, { duration: 200 });
+  };
+
+  const animatedContainerStyle = useAnimatedStyle(() => {
+    const borderColor = error
+      ? COLORS.status.error
+      : interpolateColor(
+          focusValue.value,
+          [0, 1],
+          [COLORS.ui.inputBorder, COLORS.ui.inputFocusBorder]
+        );
+
+    return {
+      borderColor,
+      shadowOpacity: focusValue.value * 0.3,
+    };
+  });
 
   return (
-    <View className={`mb-4 ${containerClassName}`}>
+    <View style={styles.container}>
       {label && (
-        <Text className="text-sm font-medium text-gray-700 mb-1.5">{label}</Text>
+        <Text style={styles.label}>{label}</Text>
       )}
-      
-      <View
-        className={`
-          flex-row items-center
-          bg-white
-          border rounded-xl
-          ${hasError ? 'border-red-500' : 'border-gray-300'}
-          ${props.editable === false ? 'bg-gray-100' : ''}
-        `}
+
+      <AnimatedView
+        style={[
+          styles.inputContainer,
+          animatedContainerStyle,
+          error && styles.inputError,
+        ]}
       >
-        {leftIcon && (
-          <View className="pl-3">{leftIcon}</View>
-        )}
-        
+        {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
+
         <TextInput
           {...props}
-          secureTextEntry={isPassword ? !showPassword : secureTextEntry}
-          className={`
-            flex-1
-            px-4 py-3
-            text-base text-gray-900
-            ${leftIcon ? 'pl-2' : ''}
-            ${rightIcon || isPassword ? 'pr-2' : ''}
-            ${inputClassName}
-          `}
-          placeholderTextColor="#9CA3AF"
+          style={[
+            styles.input,
+            leftIcon && styles.inputWithLeftIcon,
+            (rightIcon || isPassword) && styles.inputWithRightIcon,
+          ]}
+          placeholderTextColor={COLORS.text.muted}
+          secureTextEntry={isPassword && !showPassword}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
-        
+
         {isPassword && (
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
-            className="pr-3"
+            style={styles.rightIcon}
           >
-            <Text className="text-gray-500">
-              {showPassword ? '👁️' : '👁️‍🗨️'}
-            </Text>
+            <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
           </TouchableOpacity>
         )}
-        
+
         {rightIcon && !isPassword && (
-          <View className="pr-3">{rightIcon}</View>
+          <View style={styles.rightIcon}>{rightIcon}</View>
         )}
-      </View>
-      
+      </AnimatedView>
+
       {error && (
-        <Text className="text-sm text-red-500 mt-1">{error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
       )}
-      
+
       {hint && !error && (
-        <Text className="text-sm text-gray-500 mt-1">{hint}</Text>
+        <Text style={styles.hintText}>{hint}</Text>
       )}
     </View>
   );
 }
 
-export default Input;
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.ui.inputBackground,
+    borderWidth: 1,
+    borderColor: COLORS.ui.inputBorder,
+    borderRadius: 12,
+    shadowColor: COLORS.accent.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 8,
+    elevation: 0,
+  },
+  inputError: {
+    borderColor: COLORS.status.error,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: COLORS.text.primary,
+  },
+  inputWithLeftIcon: {
+    paddingLeft: 8,
+  },
+  inputWithRightIcon: {
+    paddingRight: 8,
+  },
+  leftIcon: {
+    paddingLeft: 14,
+  },
+  rightIcon: {
+    paddingRight: 14,
+  },
+  eyeIcon: {
+    fontSize: 18,
+  },
+  errorText: {
+    fontSize: 12,
+    color: COLORS.status.error,
+    marginTop: 6,
+  },
+  hintText: {
+    fontSize: 12,
+    color: COLORS.text.muted,
+    marginTop: 6,
+  },
+});
 
+export default Input;

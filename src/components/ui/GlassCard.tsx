@@ -1,39 +1,38 @@
-// components/ui/Card.tsx - Card component (Dark Theme)
+// components/ui/GlassCard.tsx - Card component (no shadows)
 
 import React from 'react';
 import { View, ViewStyle, StyleSheet } from 'react-native';
 import { COLORS } from '../../constants/colors';
 
-interface CardProps {
+interface GlassCardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'outlined';
+  variant?: 'default' | 'elevated' | 'outlined' | 'accent';
   className?: string;
   style?: ViewStyle;
 }
 
-export function Card({
+export function GlassCard({
   children,
   variant = 'default',
   className = '',
   style,
-}: CardProps) {
+}: GlassCardProps) {
   const getVariantStyle = (): ViewStyle => {
     switch (variant) {
       case 'elevated':
         return {
           backgroundColor: COLORS.glass.backgroundLight,
           borderColor: COLORS.glass.borderLight,
-          shadowColor: COLORS.accent.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          elevation: 8,
         };
       case 'outlined':
         return {
           backgroundColor: 'transparent',
           borderColor: COLORS.glass.border,
-          borderWidth: 1,
+        };
+      case 'accent':
+        return {
+          backgroundColor: COLORS.glass.background,
+          borderColor: COLORS.accent.primary,
         };
       default:
         return {
@@ -62,4 +61,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Card;
+export default GlassCard;

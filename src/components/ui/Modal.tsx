@@ -1,34 +1,35 @@
-// components/ui/Modal.tsx - Reusable modal component
+// components/ui/Modal.tsx - Modal component (Dark Theme)
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import {
   Modal as RNModal,
   View,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  StyleSheet,
+  Pressable,
+  Dimensions,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useEffect } from 'react';
+import { COLORS } from '../../constants/colors';
 
 interface ModalProps {
   visible: boolean;
   onClose: () => void;
   title?: string;
-  children: ReactNode;
+  children: React.ReactNode;
   showCloseButton?: boolean;
   closeOnBackdrop?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'full';
-  position?: 'center' | 'bottom';
 }
 
-const sizeStyles = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  full: 'max-w-full mx-4',
-};
+const { width, height } = Dimensions.get('window');
 
 export function Modal({
   visible,
@@ -38,70 +39,149 @@ export function Modal({
   showCloseButton = true,
   closeOnBackdrop = true,
   size = 'md',
-  position = 'center',
 }: ModalProps) {
+  const scale = useSharedValue(0.9);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible) {
+      scale.value = withSpring(1, { damping: 15, stiffness: 200 });
+      opacity.value = withTiming(1, { duration: 200 });
+    } else {
+      scale.value = withTiming(0.9, { duration: 150 });
+      opacity.value = withTiming(0, { duration: 150 });
+    }
+  }, [visible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value * 0.8,
+  }));
+
+  const getSizeStyle = () => {
+    switch (size) {
+      case 'sm':
+        return { width: width * 0.8, maxHeight: height * 0.5 };
+      case 'md':
+        return { width: width * 0.9, maxHeight: height * 0.7 };
+      case 'lg':
+        return { width: width * 0.95, maxHeight: height * 0.85 };
+      case 'full':
+        return { width: width - 32, maxHeight: height - 100 };
+      default:
+        return { width: width * 0.9, maxHeight: height * 0.7 };
+    }
+  };
+
   return (
     <RNModal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <TouchableWithoutFeedback
-        onPress={closeOnBackdrop ? onClose : undefined}
-      >
-        <View
-          className={`
-            flex-1 bg-black/50
-            ${position === 'center' ? 'justify-center' : 'justify-end'}
-            items-center px-4
-          `}
-        >
-          <TouchableWithoutFeedback>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              className={`w-full ${sizeStyles[size]}`}
-            >
-              <View
-                className={`
-                  bg-white
-                  ${position === 'center' ? 'rounded-2xl' : 'rounded-t-3xl'}
-                  overflow-hidden
-                `}
-              >
-                {/* Header */}
-                {(title || showCloseButton) && (
-                  <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-100">
-                    <Text className="text-xl font-bold text-gray-900">
-                      {title || ''}
-                    </Text>
-                    {showCloseButton && (
-                      <TouchableOpacity
-                        onPress={onClose}
-                        className="w-8 h-8 items-center justify-center rounded-full bg-gray-100"
-                      >
-                        <Text className="text-gray-500 text-lg">✕</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
+      <View style={styles.container}>
+        <Animated.View style={[styles.backdrop, backdropStyle]}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={closeOnBackdrop ? onClose : undefined}
+          />
+        </Animated.View>
 
-                {/* Content */}
-                <ScrollView
-                  className="px-5 py-4"
-                  showsVerticalScrollIndicator={false}
+        <Animated.View
+          style={[
+            styles.modal,
+            getSizeStyle(),
+            animatedStyle,
+          ]}
+        >
+          {/* Header */}
+          {(title || showCloseButton) && (
+            <View style={styles.header}>
+              {title && (
+                <Text style={styles.title}>{title}</Text>
+              )}
+              {showCloseButton && (
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={styles.closeButton}
                 >
-                  {children}
-                </ScrollView>
-              </View>
-            </KeyboardAvoidingView>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+                  <Text style={styles.closeIcon}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Content */}
+          <View style={styles.content}>
+            {children}
+          </View>
+        </Animated.View>
+      </View>
     </RNModal>
   );
 }
 
-export default Modal;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.background.primary,
+  },
+  modal: {
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    overflow: 'hidden',
+    shadowColor: COLORS.accent.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.glass.border,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+    flex: 1,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.glass.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  closeIcon: {
+    fontSize: 16,
+    color: COLORS.text.secondary,
+    fontWeight: '600',
+  },
+  content: {
+    padding: 20,
+  },
+});
 
+export default Modal;

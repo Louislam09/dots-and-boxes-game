@@ -1,13 +1,20 @@
-// app/history.tsx - Game history screen
+// app/history.tsx - Game history screen (Clean)
 
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  withTiming,
+  withDelay,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { gameService, GameRecord } from '../services/pocketbase/games';
-import { Avatar, Card, LoadingSpinner } from '../components/ui';
+import { Avatar, GlassCard, LoadingSpinner } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { formatRelativeTime, formatDuration } from '../utils/helpers';
+import { COLORS, getPlayerColor } from '../constants/colors';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -19,7 +26,11 @@ export default function HistoryScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
+  // Animation values
+  const contentOpacity = useSharedValue(0);
+
   useEffect(() => {
+    contentOpacity.value = withDelay(100, withTiming(1, { duration: 400 }));
     loadGames();
   }, []);
 
@@ -48,124 +59,253 @@ export default function HistoryScreen() {
     }
   };
 
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
+
   const getResult = (game: GameRecord) => {
-    if (game.isDraw) return { text: 'Draw', color: 'text-amber-600', bg: 'bg-amber-100' };
-    if (game.winner === user?.id) return { text: 'Won', color: 'text-emerald-600', bg: 'bg-emerald-100' };
-    return { text: 'Lost', color: 'text-red-500', bg: 'bg-red-100' };
+    if (game.isDraw) return { text: 'Draw', color: COLORS.status.warning };
+    if (game.winner === user?.id) return { text: 'Won', color: COLORS.status.success };
+    return { text: 'Lost', color: COLORS.status.error };
   };
 
   return (
-    <View
-      className="flex-1 bg-gray-50"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-    >
+    <View style={styles.container}>
       {/* Header */}
-      <View className="flex-row items-center px-4 py-3">
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
           onPress={() => router.back()}
-          className="w-10 h-10 bg-white rounded-full items-center justify-center mr-3"
+          style={styles.backButton}
         >
-          <Text className="text-lg">←</Text>
+          <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text className="text-2xl font-bold text-gray-900">📜 Game History</Text>
+        <Text style={styles.headerTitle}>Game History</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      {/* Games List */}
-      {isLoading && games.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <LoadingSpinner />
-        </View>
-      ) : (
-        <ScrollView
-          className="flex-1 px-4"
-          onScroll={({ nativeEvent }) => {
-            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-            if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 20) {
-              loadMore();
-            }
-          }}
-          scrollEventThrottle={400}
-        >
-          {games.map((game) => {
-            const result = getResult(game);
-            const myPlayer = game.players.find((p) => p.id === user?.id);
-            const opponent = game.players.find((p) => p.id !== user?.id);
+      {/* Content */}
+      <Animated.View style={[styles.content, contentAnimatedStyle]}>
+        {isLoading && games.length === 0 ? (
+          <View style={styles.loadingContainer}>
+            <LoadingSpinner />
+          </View>
+        ) : (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+            onScroll={({ nativeEvent }) => {
+              const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+              if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 20) {
+                loadMore();
+              }
+            }}
+            scrollEventThrottle={400}
+          >
+            {games.map((game) => {
+              const result = getResult(game);
+              const myPlayer = game.players.find((p) => p.id === user?.id);
+              const opponent = game.players.find((p) => p.id !== user?.id);
+              const myPlayerIndex = game.players.findIndex((p) => p.id === user?.id);
+              const opponentIndex = game.players.findIndex((p) => p.id !== user?.id);
 
-            return (
-              <Card key={game.id} className="mb-3">
-                <View className="flex-row items-center justify-between mb-3">
-                  <View className={`px-3 py-1 rounded-full ${result.bg}`}>
-                    <Text className={`font-semibold ${result.color}`}>
+              return (
+                <GlassCard key={game.id} style={styles.gameCard}>
+                  {/* Header */}
+                  <View style={styles.gameHeader}>
+                    <Text style={[styles.resultText, { color: result.color }]}>
                       {result.text}
                     </Text>
-                  </View>
-                  <Text className="text-gray-500 text-sm">
-                    {formatRelativeTime(game.finishedAt)}
-                  </Text>
-                </View>
-
-                <View className="flex-row items-center justify-between">
-                  {/* You */}
-                  <View className="items-center flex-1">
-                    <Avatar name={myPlayer?.name || 'You'} size="md" />
-                    <Text className="font-medium text-gray-900 mt-1">You</Text>
-                    <Text
-                      className="text-2xl font-bold"
-                      style={{ color: myPlayer?.color }}
-                    >
-                      {myPlayer?.score || 0}
+                    <Text style={styles.gameTime}>
+                      {formatRelativeTime(game.finishedAt)}
                     </Text>
                   </View>
 
-                  {/* VS */}
-                  <View className="px-4">
-                    <Text className="text-gray-400 font-bold">VS</Text>
+                  {/* Scores */}
+                  <View style={styles.scoresContainer}>
+                    <View style={styles.playerSection}>
+                      <Avatar name={myPlayer?.name || 'You'} size="md" />
+                      <Text style={styles.playerLabel}>You</Text>
+                      <Text
+                        style={[styles.playerScore, { color: getPlayerColor(myPlayerIndex) }]}
+                      >
+                        {myPlayer?.score || 0}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.vsText}>vs</Text>
+
+                    <View style={styles.playerSection}>
+                      <Avatar name={opponent?.name || 'Opponent'} size="md" />
+                      <Text style={styles.playerLabel} numberOfLines={1}>
+                        {opponent?.name || 'Opponent'}
+                      </Text>
+                      <Text
+                        style={[styles.playerScore, { color: getPlayerColor(opponentIndex) }]}
+                      >
+                        {opponent?.score || 0}
+                      </Text>
+                    </View>
                   </View>
 
-                  {/* Opponent */}
-                  <View className="items-center flex-1">
-                    <Avatar name={opponent?.name || 'Opponent'} size="md" />
-                    <Text className="font-medium text-gray-900 mt-1">
-                      {opponent?.name || 'Opponent'}
+                  {/* Footer */}
+                  <View style={styles.gameFooter}>
+                    <Text style={styles.gameMode}>
+                      {game.gameMode === '1vs1' ? '1v1' : '3 Players'}
                     </Text>
-                    <Text
-                      className="text-2xl font-bold"
-                      style={{ color: opponent?.color }}
-                    >
-                      {opponent?.score || 0}
+                    <Text style={styles.gameMeta}>
+                      {game.totalMoves} moves • {formatDuration(game.duration)}
                     </Text>
                   </View>
-                </View>
+                </GlassCard>
+              );
+            })}
 
-                <View className="flex-row justify-between mt-3 pt-3 border-t border-gray-100">
-                  <Text className="text-gray-500 text-sm">
-                    {game.gameMode === '1vs1' ? '1v1' : '3 Players'}
-                  </Text>
-                  <Text className="text-gray-500 text-sm">
-                    {game.totalMoves} moves • {formatDuration(game.duration)}
-                  </Text>
-                </View>
-              </Card>
-            );
-          })}
+            {games.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>🎮</Text>
+                <Text style={styles.emptyTitle}>No Games Yet</Text>
+                <Text style={styles.emptyText}>
+                  Play some games to see your history!
+                </Text>
+              </View>
+            )}
 
-          {games.length === 0 && (
-            <View className="items-center py-10">
-              <Text className="text-5xl mb-4">🎮</Text>
-              <Text className="text-gray-500 text-center">
-                No games played yet.{'\n'}Start playing to see your history!
-              </Text>
-            </View>
-          )}
-
-          {isLoading && games.length > 0 && (
-            <View className="py-4">
-              <LoadingSpinner size="small" />
-            </View>
-          )}
-        </ScrollView>
-      )}
+            {isLoading && games.length > 0 && (
+              <View style={styles.loadMoreContainer}>
+                <LoadingSpinner size="small" />
+              </View>
+            )}
+          </ScrollView>
+        )}
+      </Animated.View>
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.glass.background,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    fontSize: 20,
+    color: COLORS.text.primary,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  headerSpacer: {
+    width: 44,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gameCard: {
+    marginBottom: 12,
+  },
+  gameHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  resultText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  gameTime: {
+    fontSize: 12,
+    color: COLORS.text.muted,
+  },
+  scoresContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  playerSection: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  playerLabel: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+    marginTop: 6,
+    maxWidth: 80,
+    textAlign: 'center',
+  },
+  playerScore: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  vsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text.muted,
+    paddingHorizontal: 12,
+  },
+  gameFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.glass.border,
+  },
+  gameMode: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+  },
+  gameMeta: {
+    fontSize: 12,
+    color: COLORS.text.muted,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  loadMoreContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+});
