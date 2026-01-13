@@ -15,6 +15,7 @@ import { Input, Toast, useToast, GlassCard, GlowButton } from '../components/ui'
 import { roomService } from '../services/pocketbase';
 import { useSocket } from '../contexts/SocketContext';
 import { useGame } from '../contexts/GameContext';
+import { gameStorage } from '../utils/storage';
 import { COLORS } from '../constants/colors';
 import type { GameMode } from '../types/game';
 
@@ -54,6 +55,15 @@ export default function CreateRoomScreen() {
 
       if (result.success && result.room) {
         const maxPlayers = gameMode === '3players' ? 3 : 2;
+
+        // Save active room for reconnection
+        await gameStorage.saveActiveRoom({
+          roomCode: result.room.code,
+          roomId: result.room.id,
+          gameMode,
+          status: 'waiting',
+        });
+
         initGame(result.room.code, result.room.id, gameMode);
         joinRoom(result.room.code, result.room.id, gameMode, maxPlayers);
         router.push(`/lobby/${result.room.code}`);
@@ -240,7 +250,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   modeCard: {
-    flex: 1,
     backgroundColor: COLORS.glass.background,
     borderWidth: 1.5,
     borderColor: COLORS.glass.border,

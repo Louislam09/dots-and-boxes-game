@@ -10,3 +10,5 @@ export { LoadingSpinner } from './LoadingSpinner';
 export { GradientBackground } from './GradientBackground';
 export { GlassCard } from './GlassCard';
 export { GlowButton } from './GlowButton';
+export { AlertModal } from './AlertModal';
+export type { AlertOptions, AlertButton, AlertType } from './AlertModal';

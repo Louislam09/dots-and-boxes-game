@@ -11,6 +11,7 @@ import React, {
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { initializeBoard } from '../services/game/board';
+import { gameStorage } from '../utils/storage';
 import { GAME_CONFIG } from '../constants/game';
 import type {
   GameState,
@@ -178,6 +179,9 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       },
 
       onGameStarted: ({ players, firstPlayerId }) => {
+        // Update active room status
+        gameStorage.updateActiveRoomStatus('playing');
+        
         setGameState((prev) => {
           if (!prev) return prev;
           return {
@@ -242,6 +246,9 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       },
 
       onGameOver: ({ winner, isDraw, finalScores }) => {
+        // Clear active room when game ends
+        gameStorage.clearActiveRoom();
+        
         setGameState((prev) => {
           if (!prev) return prev;
 

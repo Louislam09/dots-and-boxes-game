@@ -13,7 +13,9 @@ import Animated, {
 import { useGame } from '../../contexts/GameContext';
 import { useSocket } from '../../contexts/SocketContext';
 import { useSound } from '../../contexts/SoundContext';
+import { useAlert } from '../../contexts/AlertContext';
 import { roomService } from '../../services/pocketbase';
+import { gameStorage } from '../../utils/storage';
 import { GameBoard, ScoreBoard, TurnBanner, GameOverModal } from '../../components/game';
 import { Toast, useToast } from '../../components/ui/Toast';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -26,6 +28,7 @@ export default function GameScreen() {
   const { gameState, clearSelection } = useGame();
   const { leaveRoom } = useSocket();
   const { triggerHaptic, playSound } = useSound();
+  const { confirm } = useAlert();
   const { toast, showInfo, hideToast } = useToast();
 
   const [showGameOver, setShowGameOver] = useState(false);
@@ -54,15 +57,32 @@ export default function GameScreen() {
   // Handle back button
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      showInfo('Press leave button to exit');
+      confirmLeave();
       return true;
     });
 
     return () => backHandler.remove();
   }, []);
 
+  const confirmLeave = () => {
+    // Don't confirm if game is already over
+    if (gameState?.status === 'finished') {
+      handleLeave();
+      return;
+    }
+    
+    confirm(
+      'Leave Game?',
+      'Are you sure you want to leave? The game is still in progress and you will forfeit.',
+      handleLeave
+    );
+  };
+
   const handleLeave = async () => {
     leaveRoom();
+    
+    // Clear active room on leave
+    await gameStorage.clearActiveRoom();
     
     if (gameState?.roomId) {
       await roomService.leaveRoom(gameState.roomId);
@@ -90,7 +110,7 @@ export default function GameScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={handleLeave}
+            onPress={confirmLeave}
             style={styles.backButton}
           >
             <Text style={styles.backIcon}>←</Text>

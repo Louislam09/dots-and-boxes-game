@@ -6,7 +6,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGame } from '../../contexts/GameContext';
 import { useSocket } from '../../contexts/SocketContext';
+import { useAlert } from '../../contexts/AlertContext';
 import { roomService } from '../../services/pocketbase';
+import { gameStorage } from '../../utils/storage';
 import { WaitingRoom } from '../../components/game/WaitingRoom';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { Toast, useToast } from '../../components/ui/Toast';
@@ -18,6 +20,7 @@ export default function LobbyScreen() {
   const insets = useSafeAreaInsets();
   const { gameState } = useGame();
   const { leaveRoom } = useSocket();
+  const { confirm } = useAlert();
   const { toast, showError, hideToast } = useToast();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -34,15 +37,26 @@ export default function LobbyScreen() {
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleLeave();
+      confirmLeave();
       return true;
     });
 
     return () => backHandler.remove();
   }, []);
 
+  const confirmLeave = () => {
+    confirm(
+      'Leave Room?',
+      'Are you sure you want to leave this room? You will need the room code to rejoin.',
+      handleLeave
+    );
+  };
+
   const handleLeave = async () => {
     leaveRoom();
+    
+    // Clear active room on leave
+    await gameStorage.clearActiveRoom();
     
     if (gameState?.roomId) {
       await roomService.leaveRoom(gameState.roomId);
@@ -86,7 +100,7 @@ export default function LobbyScreen() {
         { paddingTop: insets.top, paddingBottom: insets.bottom },
       ]}
     >
-      <WaitingRoom onLeave={handleLeave} />
+      <WaitingRoom onLeave={confirmLeave} />
       <Toast {...toast} onHide={hideToast} />
     </View>
   );

@@ -15,6 +15,7 @@ import { Toast, useToast, GlassCard, GlowButton } from '../components/ui';
 import { roomService } from '../services/pocketbase';
 import { useSocket } from '../contexts/SocketContext';
 import { useGame } from '../contexts/GameContext';
+import { gameStorage } from '../utils/storage';
 import { validators, sanitizeRoomCode } from '../utils/validators';
 import { COLORS } from '../constants/colors';
 
@@ -97,6 +98,15 @@ export default function JoinRoomScreen() {
 
       if (result.success && result.room) {
         const gm = result.room.gameMode as '1vs1' | '3players';
+        
+        // Save active room for reconnection
+        await gameStorage.saveActiveRoom({
+          roomCode: result.room.code,
+          roomId: result.room.id,
+          gameMode: gm,
+          status: 'waiting',
+        });
+        
         initGame(result.room.code, result.room.id, gm);
         joinRoom(result.room.code, result.room.id, gm, result.room.maxPlayers);
         router.push(`/lobby/${result.room.code}`);

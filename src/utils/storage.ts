@@ -107,7 +107,15 @@ export const storage = {
   },
 };
 
-// Game state storage helpers
+// Active room storage - for reconnection
+export interface ActiveRoomData {
+  roomCode: string;
+  roomId: string;
+  gameMode: '1vs1' | '3players';
+  status: 'waiting' | 'playing';
+  savedAt: string;
+}
+
 export const gameStorage = {
   /**
    * Save current game state for reconnection
@@ -136,6 +144,53 @@ export const gameStorage = {
    */
   async clearGameState(): Promise<void> {
     await storage.remove(CONFIG.STORAGE_KEYS.GAME_STATE);
+  },
+
+  /**
+   * Save active room info for reconnection
+   */
+  async saveActiveRoom(data: Omit<ActiveRoomData, 'savedAt'>): Promise<void> {
+    await storage.set('active_room', {
+      ...data,
+      savedAt: new Date().toISOString(),
+    });
+  },
+
+  /**
+   * Get active room info
+   */
+  async getActiveRoom(): Promise<ActiveRoomData | null> {
+    const data = await storage.get<ActiveRoomData>('active_room');
+    if (!data) return null;
+    
+    // Check if the saved data is less than 24 hours old
+    const savedAt = new Date(data.savedAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - savedAt.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursDiff > 24) {
+      await gameStorage.clearActiveRoom();
+      return null;
+    }
+    
+    return data;
+  },
+
+  /**
+   * Update active room status
+   */
+  async updateActiveRoomStatus(status: 'waiting' | 'playing'): Promise<void> {
+    const current = await gameStorage.getActiveRoom();
+    if (current) {
+      await gameStorage.saveActiveRoom({ ...current, status });
+    }
+  },
+
+  /**
+   * Clear active room info
+   */
+  async clearActiveRoom(): Promise<void> {
+    await storage.remove('active_room');
   },
 };
 

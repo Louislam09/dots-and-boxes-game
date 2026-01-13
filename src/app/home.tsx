@@ -1,6 +1,6 @@
 // app/home.tsx - Home screen (Minimalist)
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,9 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { useAuth } from '../contexts/AuthContext';
+import { useSocket } from '../contexts/SocketContext';
+import { useGame } from '../contexts/GameContext';
+import { gameStorage, ActiveRoomData } from '../utils/storage';
 import { getExperienceToNextLevel } from '../constants/game';
 import { COLORS } from '../constants/colors';
 
@@ -19,14 +22,46 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { joinRoom, isConnected } = useSocket();
+  const { initGame } = useGame();
   const insets = useSafeAreaInsets();
+
+  const [activeRoom, setActiveRoom] = useState<ActiveRoomData | null>(null);
 
   // Simple fade in animation
   const contentOpacity = useSharedValue(0);
 
   useEffect(() => {
     contentOpacity.value = withDelay(100, withTiming(1, { duration: 500 }));
+    
+    // Check for active room on mount
+    checkActiveRoom();
   }, []);
+
+  const checkActiveRoom = async () => {
+    const room = await gameStorage.getActiveRoom();
+    setActiveRoom(room);
+  };
+
+  const handleReconnect = async () => {
+    if (!activeRoom || !isConnected) return;
+
+    const maxPlayers = activeRoom.gameMode === '3players' ? 3 : 2;
+    initGame(activeRoom.roomCode, activeRoom.roomId, activeRoom.gameMode);
+    joinRoom(activeRoom.roomCode, activeRoom.roomId, activeRoom.gameMode, maxPlayers);
+    
+    // Navigate based on status
+    if (activeRoom.status === 'playing') {
+      router.push(`/game/${activeRoom.roomCode}`);
+    } else {
+      router.push(`/lobby/${activeRoom.roomCode}`);
+    }
+  };
+
+  const handleDismissReconnect = async () => {
+    await gameStorage.clearActiveRoom();
+    setActiveRoom(null);
+  };
 
   const contentAnimatedStyle = useAnimatedStyle(() => ({
     opacity: contentOpacity.value,
@@ -75,6 +110,38 @@ export default function HomeScreen() {
               <Text style={styles.levelText}>Lv. {user.level}</Text>
             </View>
           </View>
+
+          {/* Reconnect Banner */}
+          {activeRoom && (
+            <View style={styles.reconnectBanner}>
+              <View style={styles.reconnectContent}>
+                <Text style={styles.reconnectIcon}>🎮</Text>
+                <View style={styles.reconnectTextContainer}>
+                  <Text style={styles.reconnectTitle}>
+                    {activeRoom.status === 'playing' ? 'Game in Progress' : 'Room Active'}
+                  </Text>
+                  <Text style={styles.reconnectSubtext}>
+                    Room: {activeRoom.roomCode}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.reconnectActions}>
+                <TouchableOpacity
+                  onPress={handleDismissReconnect}
+                  style={styles.reconnectDismissButton}
+                >
+                  <Text style={styles.reconnectDismissText}>✕</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleReconnect}
+                  style={styles.reconnectButton}
+                  disabled={!isConnected}
+                >
+                  <Text style={styles.reconnectButtonText}>Rejoin</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           {/* Main Actions */}
           <View style={styles.actionsSection}>
@@ -387,5 +454,66 @@ const styles = StyleSheet.create({
   signOutText: {
     fontSize: 14,
     color: COLORS.text.muted,
+  },
+  reconnectBanner: {
+    backgroundColor: COLORS.status.warning + '20',
+    borderWidth: 1,
+    borderColor: COLORS.status.warning,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  reconnectContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  reconnectIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  reconnectTextContainer: {
+    flex: 1,
+  },
+  reconnectTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.status.warning,
+    marginBottom: 2,
+  },
+  reconnectSubtext: {
+    fontSize: 12,
+    color: COLORS.text.secondary,
+  },
+  reconnectActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reconnectDismissButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.glass.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reconnectDismissText: {
+    fontSize: 14,
+    color: COLORS.text.muted,
+  },
+  reconnectButton: {
+    backgroundColor: COLORS.status.warning,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  reconnectButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.background.primary,
   },
 });
