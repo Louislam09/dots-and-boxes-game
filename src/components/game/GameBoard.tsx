@@ -1,6 +1,6 @@
-// components/game/GameBoard.tsx - Main game board component (Dark Gaming Theme)
+// components/game/GameBoard.tsx - Main game board component (Optimized)
 
-import React, { useMemo } from 'react';
+import React, { useMemo, memo, useCallback } from 'react';
 import { View, Dimensions, StyleSheet } from 'react-native';
 import Svg from 'react-native-svg';
 import { Dot } from './Dot';
@@ -15,7 +15,7 @@ interface GameBoardProps {
   size?: number;
 }
 
-export function GameBoard({ size: propSize }: GameBoardProps) {
+export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardProps) {
   const { gameState, selectedDot, isMyTurn, selectDot, myPlayer } = useGame();
 
   // Calculate board size - use full width if no prop provided
@@ -41,40 +41,33 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
     return scaledDots.find(d => d.id === selectedDot.id) || null;
   }, [selectedDot, scaledDots]);
 
-  // Get adjacent dots for preview line (using scaled positions)
+  // Get adjacent dots for preview line - optimized
   const adjacentDots = useMemo(() => {
-    if (!scaledSelectedDot || !gameState) return [];
+    if (!scaledSelectedDot) return [];
 
+    const { row, col, connectedTo } = scaledSelectedDot;
     const adjacent: DotType[] = [];
 
-    const directions = [
-      { row: -1, col: 0 },
-      { row: 1, col: 0 },
-      { row: 0, col: -1 },
-      { row: 0, col: 1 },
+    // Check all 4 directions directly
+    const checks = [
+      { r: row - 1, c: col },     // top
+      { r: row + 1, c: col },     // bottom
+      { r: row, c: col - 1 },     // left
+      { r: row, c: col + 1 },     // right
     ];
 
-    for (const dir of directions) {
-      const newRow = scaledSelectedDot.row + dir.row;
-      const newCol = scaledSelectedDot.col + dir.col;
-
-      if (
-        newRow >= 0 &&
-        newRow < GRID_SIZE &&
-        newCol >= 0 &&
-        newCol < GRID_SIZE
-      ) {
-        const adjacentId = newRow * GRID_SIZE + newCol;
-        const adjacentDot = scaledDots[adjacentId];
-
-        if (adjacentDot && !scaledSelectedDot.connectedTo.includes(adjacentId)) {
-          adjacent.push(adjacentDot);
+    for (const { r, c } of checks) {
+      if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
+        const id = r * GRID_SIZE + c;
+        if (!connectedTo.includes(id)) {
+          const dot = scaledDots[id];
+          if (dot) adjacent.push(dot);
         }
       }
     }
 
     return adjacent;
-  }, [scaledSelectedDot, scaledDots, gameState]);
+  }, [scaledSelectedDot, scaledDots]);
 
   if (!gameState) {
     return (
@@ -155,7 +148,7 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

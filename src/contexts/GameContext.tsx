@@ -85,7 +85,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
     [boardSize]
   );
 
-  // Handle dot selection
+  // Handle dot selection - optimized for fast response
   const selectDot = useCallback(
     (dot: Dot) => {
       if (!gameState || gameState.status !== 'playing' || !isMyTurn) {
@@ -95,24 +95,37 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       if (!selectedDot) {
         // First dot selected
         setSelectedDot(dot);
-      } else {
-        // Second dot selected - try to make a move
-        if (selectedDot.id !== dot.id) {
-          // Check if move is valid (adjacent and not already connected)
-          const isHorizontal =
-            selectedDot.row === dot.row &&
-            Math.abs(selectedDot.col - dot.col) === 1;
-          const isVertical =
-            selectedDot.col === dot.col &&
-            Math.abs(selectedDot.row - dot.row) === 1;
+        return;
+      }
 
-          if (isHorizontal || isVertical) {
-            if (!selectedDot.connectedTo.includes(dot.id)) {
-              makeMove(selectedDot.id, dot.id);
-            }
-          }
-        }
+      // Same dot clicked - deselect
+      if (selectedDot.id === dot.id) {
         setSelectedDot(null);
+        return;
+      }
+
+      // Check if move is valid (adjacent)
+      const isHorizontal =
+        selectedDot.row === dot.row &&
+        Math.abs(selectedDot.col - dot.col) === 1;
+      const isVertical =
+        selectedDot.col === dot.col &&
+        Math.abs(selectedDot.row - dot.row) === 1;
+      const isAdjacent = isHorizontal || isVertical;
+
+      if (isAdjacent) {
+        // Adjacent dot - check if not already connected
+        if (!selectedDot.connectedTo.includes(dot.id)) {
+          // Valid move - make it
+          makeMove(selectedDot.id, dot.id);
+          setSelectedDot(null);
+        } else {
+          // Already connected - switch selection to this dot
+          setSelectedDot(dot);
+        }
+      } else {
+        // Not adjacent - switch selection to this dot
+        setSelectedDot(dot);
       }
     },
     [gameState, isMyTurn, selectedDot, makeMove]
