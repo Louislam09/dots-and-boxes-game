@@ -1,26 +1,31 @@
-// components/game/GameBoard.tsx - Main game board component (Optimized)
+// components/game/GameBoard.tsx - Main game board component (Edge-based, Optimized)
 
-import React, { useMemo, memo, useCallback } from 'react';
-import { View, Dimensions, StyleSheet } from 'react-native';
+import React, { useMemo, memo } from 'react';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg from 'react-native-svg';
 import { Dot } from './Dot';
-import { Line, PreviewLine } from './Line';
+import { EdgeLine, EdgePreviewLine } from './Line';
 import { Square } from './Square';
-import { GAME_CONFIG } from '../../constants/game';
+import { GAME_CONFIG, getResponsiveSizes } from '../../constants/game';
 import { COLORS } from '../../constants/colors';
 import { useGame } from '../../contexts/GameContext';
-import type { Dot as DotType } from '../../types/game';
 
 interface GameBoardProps {
   size?: number;
 }
 
 export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardProps) {
-  const { gameState, selectedDot, isMyTurn, selectDot, myPlayer } = useGame();
+  const { gameState, selectedDot, isMyTurn, selectDot, myPlayer, edges } = useGame();
+  const { width: screenWidth } = useWindowDimensions();
 
   // Calculate board size - use full width if no prop provided
-  const screenWidth = Dimensions.get('window').width;
   const size = propSize || screenWidth - 32;
+
+  // Get responsive sizes based on screen width
+  const { dotSize, hitArea, lineWidth } = useMemo(
+    () => getResponsiveSizes(screenWidth),
+    [screenWidth]
+  );
 
   const { GRID_SIZE, BOARD_PADDING } = GAME_CONFIG;
   const spacing = (size - BOARD_PADDING * 2) / (GRID_SIZE - 1);
@@ -41,33 +46,39 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
     return scaledDots.find(d => d.id === selectedDot.id) || null;
   }, [selectedDot, scaledDots]);
 
-  // Get adjacent dots for preview line - optimized
-  const adjacentDots = useMemo(() => {
+  // O(1) lookup Set for existing edges - prevents ghost previews in multiplayer
+  const edgeSet = useMemo(() => {
+    return new Set(edges.map(e => e.id));
+  }, [edges]);
+
+  // Get preview edges for adjacent unconnected dots - edge-based, O(1) per direction
+  const previewEdges = useMemo(() => {
     if (!scaledSelectedDot) return [];
 
     const { row, col, connectedTo } = scaledSelectedDot;
-    const adjacent: DotType[] = [];
+    const previews: { row: number; col: number; dir: 'H' | 'V' }[] = [];
 
     // Check all 4 directions directly
     const checks = [
-      { r: row - 1, c: col },     // top
-      { r: row + 1, c: col },     // bottom
-      { r: row, c: col - 1 },     // left
-      { r: row, c: col + 1 },     // right
+      { r: row - 1, c: col, dir: 'V' as const, edgeRow: row - 1, edgeCol: col },     // top
+      { r: row + 1, c: col, dir: 'V' as const, edgeRow: row, edgeCol: col },         // bottom
+      { r: row, c: col - 1, dir: 'H' as const, edgeRow: row, edgeCol: col - 1 },     // left
+      { r: row, c: col + 1, dir: 'H' as const, edgeRow: row, edgeCol: col },         // right
     ];
 
-    for (const { r, c } of checks) {
+    for (const { r, c, dir, edgeRow, edgeCol } of checks) {
       if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
         const id = r * GRID_SIZE + c;
-        if (!connectedTo.includes(id)) {
-          const dot = scaledDots[id];
-          if (dot) adjacent.push(dot);
+        // Check both connectedTo AND edgeSet to handle race conditions
+        const edgeKey = `${dir}-${edgeRow}-${edgeCol}`;
+        if (!connectedTo.includes(id) && !edgeSet.has(edgeKey)) {
+          previews.push({ row: edgeRow, col: edgeCol, dir });
         }
       }
     }
 
-    return adjacent;
-  }, [scaledSelectedDot, scaledDots]);
+    return previews;
+  }, [scaledSelectedDot, GRID_SIZE, edgeSet]);
 
   if (!gameState) {
     return (
@@ -83,7 +94,7 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
     );
   }
 
-  const { lines, squares, status } = gameState;
+  const { squares, status } = gameState;
   const isInteractive = status === 'playing' && isMyTurn;
 
   return (
@@ -115,23 +126,28 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
           />
         ))}
 
-        {/* Preview lines for adjacent dots */}
-        {scaledSelectedDot &&
-          adjacentDots.map((adjDot) => (
-            <PreviewLine
-              key={`preview-${adjDot.id}`}
-              dot1={scaledSelectedDot}
-              dot2={adjDot}
-              color={myPlayer?.color}
-            />
-          ))}
+        {/* Preview lines for adjacent dots - edge-based */}
+        {previewEdges.map((preview) => (
+          <EdgePreviewLine
+            key={`preview-${preview.dir}-${preview.row}-${preview.col}`}
+            row={preview.row}
+            col={preview.col}
+            dir={preview.dir}
+            spacing={spacing}
+            padding={BOARD_PADDING}
+            lineWidth={lineWidth}
+            color={myPlayer?.color}
+          />
+        ))}
 
-        {/* Drawn lines */}
-        {lines.map((line) => (
-          <Line
-            key={`line-${line.id}`}
-            line={line}
-            dots={scaledDots}
+        {/* Drawn lines - edge-based rendering */}
+        {edges.map((edge) => (
+          <EdgeLine
+            key={edge.id}
+            edge={edge}
+            spacing={spacing}
+            padding={BOARD_PADDING}
+            lineWidth={lineWidth}
           />
         ))}
       </Svg>
@@ -144,6 +160,8 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
           isSelected={selectedDot?.id === dot.id}
           isInteractive={isInteractive}
           onPress={selectDot}
+          dotSize={dotSize}
+          hitArea={hitArea}
         />
       ))}
     </View>

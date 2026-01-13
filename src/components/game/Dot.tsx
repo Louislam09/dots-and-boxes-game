@@ -1,7 +1,7 @@
-// components/game/Dot.tsx - Individual dot component (Optimized)
+// components/game/Dot.tsx - Individual dot component (Optimized, Responsive)
 
-import React, { memo, useCallback } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { memo, useCallback, useMemo } from 'react';
+import { Pressable, View } from 'react-native';
 import { COLORS } from '../../constants/colors';
 import type { Dot as DotType } from '../../types/game';
 
@@ -10,65 +10,56 @@ interface DotProps {
   isSelected: boolean;
   isInteractive: boolean;
   onPress: (dot: DotType) => void;
+  dotSize: number;  // Responsive size passed from parent
+  hitArea: number;  // Responsive hit area passed from parent
 }
 
-const DOT_SIZE = 22;
-const HIT_AREA = 44; // Larger touch area for easier tapping
-
-export const Dot = memo(function Dot({ dot, isSelected, isInteractive, onPress }: DotProps) {
+export const Dot = memo(function Dot({ 
+  dot, 
+  isSelected, 
+  isInteractive, 
+  onPress,
+  dotSize,
+  hitArea,
+}: DotProps) {
   const handlePress = useCallback(() => {
     if (isInteractive) {
       onPress(dot);
     }
   }, [isInteractive, onPress, dot]);
 
+  // Memoize styles to avoid recreation on every render
+  const touchAreaStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    width: hitArea,
+    height: hitArea,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    left: dot.x - hitArea / 2,
+    top: dot.y - hitArea / 2,
+  }), [dot.x, dot.y, hitArea]);
+
+  const dotStyle = useMemo(() => ({
+    width: dotSize,
+    height: dotSize,
+    borderRadius: dotSize / 2,
+    backgroundColor: isSelected ? COLORS.game.dotActive : COLORS.game.dot,
+    borderWidth: 2,
+    borderColor: isSelected ? COLORS.accent.primary : COLORS.glass.borderLight,
+    transform: isSelected ? [{ scale: 1.25 }] : [],
+    opacity: isInteractive ? 1 : 0.6,
+  }), [dotSize, isSelected, isInteractive]);
+
   return (
     <Pressable
       onPress={handlePress}
       disabled={!isInteractive}
-      style={[
-        styles.touchArea,
-        {
-          left: dot.x - HIT_AREA / 2,
-          top: dot.y - HIT_AREA / 2,
-        },
-      ]}
+      style={touchAreaStyle}
+      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
     >
-      <View
-        style={[
-          styles.dot,
-          isSelected && styles.dotSelected,
-          !isInteractive && styles.dotDisabled,
-        ]}
-      />
+      <View style={dotStyle} />
     </Pressable>
   );
-});
-
-const styles = StyleSheet.create({
-  touchArea: {
-    position: 'absolute',
-    width: HIT_AREA,
-    height: HIT_AREA,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dot: {
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
-    backgroundColor: COLORS.game.dot,
-    borderWidth: 2,
-    borderColor: COLORS.glass.borderLight,
-  },
-  dotSelected: {
-    backgroundColor: COLORS.game.dotActive,
-    borderColor: COLORS.accent.primary,
-    transform: [{ scale: 1.3 }],
-  },
-  dotDisabled: {
-    opacity: 0.6,
-  },
 });
 
 export default Dot;

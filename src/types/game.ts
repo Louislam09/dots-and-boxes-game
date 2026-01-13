@@ -9,6 +9,19 @@ export interface Dot {
   connectedTo: number[];
 }
 
+// Edge-based representation for fast multiplayer
+// dir: "H" = horizontal line to the right, "V" = vertical line downward
+export interface Edge {
+  id: string;
+  row: number;
+  col: number;
+  dir: 'H' | 'V';
+  playerId: string;
+  color: string;
+  isOptimistic?: boolean; // True if not yet confirmed by server
+}
+
+// Legacy Line type for backward compatibility
 export interface Line {
   id: string;
   dot1Id: number;

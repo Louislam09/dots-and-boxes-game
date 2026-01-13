@@ -2,7 +2,7 @@
 
 export { GameBoard } from './GameBoard';
 export { Dot } from './Dot';
-export { Line, PreviewLine } from './Line';
+export { Line, PreviewLine, EdgeLine, EdgePreviewLine } from './Line';
 export { Square } from './Square';
 export { ScoreBoard } from './ScoreBoard';
 export { TurnBanner, TurnIndicator } from './TurnIndicator';

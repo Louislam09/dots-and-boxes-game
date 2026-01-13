@@ -1,4 +1,4 @@
-// contexts/GameContext.tsx - Game state context
+// contexts/GameContext.tsx - Game state context (Edge-based, Optimistic UI)
 
 import React, {
   createContext,
@@ -6,19 +6,21 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useRef,
   ReactNode,
 } from 'react';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
 import { initializeBoard } from '../services/game/board';
 import { gameStorage } from '../utils/storage';
-import { GAME_CONFIG } from '../constants/game';
+import { GAME_CONFIG, dotsToEdge, createEdgeId } from '../constants/game';
 import type {
   GameState,
   Player,
   Dot,
   Line,
   Square,
+  Edge,
   GameMode,
 } from '../types/game';
 
@@ -29,6 +31,7 @@ interface GameContextValue {
   selectedDot: Dot | null;
   isLoading: boolean;
   error: string | null;
+  edges: Edge[]; // Edge-based state for fast rendering
 
   // Actions
   initGame: (roomCode: string, roomId: string, gameMode: GameMode) => void;
@@ -52,6 +55,12 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
   const [selectedDot, setSelectedDot] = useState<Dot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Edge-based state for fast rendering
+  const [edges, setEdges] = useState<Edge[]>([]);
+
+  // Track optimistic moves for potential rollback
+  const optimisticEdgesRef = useRef<Set<string>>(new Set());
 
   // Calculate derived values
   const myPlayer = gameState?.players.find((p) => p.id === user?.id) ?? null;
@@ -80,15 +89,17 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
 
       setGameState(initialState);
       setSelectedDot(null);
+      setEdges([]); // Reset edges
+      optimisticEdgesRef.current.clear();
       setError(null);
     },
     [boardSize]
   );
 
-  // Handle dot selection - optimized for fast response
+  // Handle dot selection - OPTIMISTIC UI for instant response
   const selectDot = useCallback(
     (dot: Dot) => {
-      if (!gameState || gameState.status !== 'playing' || !isMyTurn) {
+      if (!gameState || gameState.status !== 'playing' || !isMyTurn || !myPlayer) {
         return;
       }
 
@@ -116,7 +127,38 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       if (isAdjacent) {
         // Adjacent dot - check if not already connected
         if (!selectedDot.connectedTo.includes(dot.id)) {
-          // Valid move - make it
+          // === OPTIMISTIC UI: Draw line IMMEDIATELY ===
+          const edgeInfo = dotsToEdge(selectedDot.id, dot.id, myPlayer.id, myPlayer.color);
+          const optimisticEdge: Edge = {
+            id: edgeInfo.id,
+            row: edgeInfo.row,
+            col: edgeInfo.col,
+            dir: edgeInfo.dir,
+            playerId: myPlayer.id,
+            color: myPlayer.color,
+            isOptimistic: true, // Mark as not confirmed
+          };
+
+          // Add edge immediately for instant visual feedback
+          setEdges(prev => [...prev, optimisticEdge]);
+          optimisticEdgesRef.current.add(edgeInfo.id);
+
+          // Update local dot connections for preview updates
+          setGameState(prev => {
+            if (!prev) return prev;
+            const newDots = [...prev.dots];
+            newDots[selectedDot.id] = {
+              ...newDots[selectedDot.id],
+              connectedTo: [...newDots[selectedDot.id].connectedTo, dot.id],
+            };
+            newDots[dot.id] = {
+              ...newDots[dot.id],
+              connectedTo: [...newDots[dot.id].connectedTo, selectedDot.id],
+            };
+            return { ...prev, dots: newDots };
+          });
+
+          // Send to server (server will broadcast confirmed move)
           makeMove(selectedDot.id, dot.id);
           setSelectedDot(null);
         } else {
@@ -128,7 +170,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
         setSelectedDot(dot);
       }
     },
-    [gameState, isMyTurn, selectedDot, makeMove]
+    [gameState, isMyTurn, selectedDot, makeMove, myPlayer]
   );
 
   // Clear dot selection
@@ -140,6 +182,8 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
   const resetGame = useCallback(() => {
     setGameState(null);
     setSelectedDot(null);
+    setEdges([]);
+    optimisticEdgesRef.current.clear();
     setError(null);
     setIsLoading(false);
   }, []);
@@ -216,19 +260,51 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
         nextPlayerId,
         scores,
       }) => {
+        // Convert to edge format
+        const edgeInfo = dotsToEdge(dot1Id, dot2Id, playerId, line.color);
+        const confirmedEdge: Edge = {
+          id: edgeInfo.id,
+          row: edgeInfo.row,
+          col: edgeInfo.col,
+          dir: edgeInfo.dir,
+          playerId,
+          color: line.color,
+          isOptimistic: false,
+        };
+
+        // Update edges - confirm optimistic or add new
+        setEdges(prev => {
+          const existingIndex = prev.findIndex(e => e.id === edgeInfo.id);
+          if (existingIndex >= 0) {
+            // Confirm optimistic edge
+            const updated = [...prev];
+            updated[existingIndex] = confirmedEdge;
+            return updated;
+          }
+          // Add new edge (from opponent)
+          return [...prev, confirmedEdge];
+        });
+
+        // Remove from optimistic tracking
+        optimisticEdgesRef.current.delete(edgeInfo.id);
+
         setGameState((prev) => {
           if (!prev) return prev;
 
-          // Update dots connections
+          // Update dots connections (skip if already updated optimistically)
           const newDots = [...prev.dots];
-          newDots[dot1Id] = {
-            ...newDots[dot1Id],
-            connectedTo: [...newDots[dot1Id].connectedTo, dot2Id],
-          };
-          newDots[dot2Id] = {
-            ...newDots[dot2Id],
-            connectedTo: [...newDots[dot2Id].connectedTo, dot1Id],
-          };
+          if (!newDots[dot1Id].connectedTo.includes(dot2Id)) {
+            newDots[dot1Id] = {
+              ...newDots[dot1Id],
+              connectedTo: [...newDots[dot1Id].connectedTo, dot2Id],
+            };
+          }
+          if (!newDots[dot2Id].connectedTo.includes(dot1Id)) {
+            newDots[dot2Id] = {
+              ...newDots[dot2Id],
+              connectedTo: [...newDots[dot2Id].connectedTo, dot1Id],
+            };
+          }
 
           // Update squares
           const newSquares = prev.squares.map((square) => {
@@ -300,9 +376,29 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
           };
         });
         setSelectedDot(null);
+        setEdges([]); // Reset edges for new game
+        optimisticEdgesRef.current.clear();
       },
 
       onRejoinSuccess: ({ gameState: serverState, players }) => {
+        // Sync edges from server lines on rejoin
+        if (serverState.lines && serverState.lines.length > 0) {
+          const syncedEdges: Edge[] = serverState.lines.map((line) => {
+            const edgeInfo = dotsToEdge(line.dot1Id, line.dot2Id, line.playerId, line.color);
+            return {
+              id: edgeInfo.id,
+              row: edgeInfo.row,
+              col: edgeInfo.col,
+              dir: edgeInfo.dir,
+              playerId: line.playerId,
+              color: line.color,
+              isOptimistic: false,
+            };
+          });
+          setEdges(syncedEdges);
+          optimisticEdgesRef.current.clear();
+        }
+
         setGameState((prev) => {
           if (!prev) return prev;
           return {
@@ -316,6 +412,24 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       onGameSync: ({ gameState: serverState, players, scores }) => {
         // Sync game state for late joiners
         console.log('Game sync received:', serverState.status);
+
+        // Sync edges from server lines
+        if (serverState.lines && serverState.lines.length > 0) {
+          const syncedEdges: Edge[] = serverState.lines.map((line) => {
+            const edgeInfo = dotsToEdge(line.dot1Id, line.dot2Id, line.playerId, line.color);
+            return {
+              id: edgeInfo.id,
+              row: edgeInfo.row,
+              col: edgeInfo.col,
+              dir: edgeInfo.dir,
+              playerId: line.playerId,
+              color: line.color,
+              isOptimistic: false,
+            };
+          });
+          setEdges(syncedEdges);
+        }
+
         setGameState((prev) => {
           if (!prev) return prev;
 
@@ -343,6 +457,11 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       },
 
       onError: ({ message, code }) => {
+        // Rollback optimistic moves on error
+        if (code === 'INVALID_MOVE' || code === 'NOT_YOUR_TURN') {
+          setEdges(prev => prev.filter(e => !e.isOptimistic));
+          optimisticEdgesRef.current.clear();
+        }
         setError(message);
         console.error('Socket error:', code, message);
       },
@@ -356,6 +475,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
     selectedDot,
     isLoading,
     error,
+    edges, // Edge-based state for fast rendering
     initGame,
     selectDot,
     clearSelection,
