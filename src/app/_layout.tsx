@@ -8,6 +8,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppProviders } from '../contexts';
+import { COLORS } from '../constants/colors';
 
 // Keep splash screen visible while loading
 SplashScreen.preventAutoHideAsync();
@@ -24,15 +25,37 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppProviders>
-        <View className="flex-1 bg-gray-50">
-          <StatusBar style="auto" />
+        <View style={{ flex: 1, backgroundColor: COLORS.background.primary }}>
+          <StatusBar style="light" />
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: '#F9FAFB' },
+              contentStyle: { backgroundColor: COLORS.background.primary },
               animation: 'slide_from_right',
             }}
-          />
+          >
+            {/* Tabs group */}
+            <Stack.Screen 
+              name="(tabs)" 
+              options={{ 
+                headerShown: false,
+                animation: 'fade',
+              }} 
+            />
+            
+            {/* Auth screens */}
+            <Stack.Screen name="index" options={{ animation: 'fade' }} />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="register" />
+            <Stack.Screen name="forgot-password" />
+            
+            {/* Game screens */}
+            <Stack.Screen name="create-room" />
+            <Stack.Screen name="join-room" />
+            <Stack.Screen name="lobby/[code]" />
+            <Stack.Screen name="game/[code]" />
+            <Stack.Screen name="history" />
+          </Stack>
         </View>
       </AppProviders>
     </SafeAreaProvider>

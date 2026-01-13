@@ -1,7 +1,7 @@
-// app/profile.tsx - User profile screen (Clean)
+// app/(tabs)/profile.tsx - Profile tab screen
 
 import { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Switch, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -10,13 +10,13 @@ import Animated, {
   withDelay,
   useSharedValue,
 } from 'react-native-reanimated';
-import { useAuth } from '../contexts/AuthContext';
-import { useSound } from '../contexts/SoundContext';
-import { GlassCard, GlowButton } from '../components/ui';
-import { getExperienceToNextLevel } from '../constants/game';
-import { COLORS } from '../constants/colors';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSound } from '../../contexts/SoundContext';
+import { GlassCard, GlowButton } from '../../components/ui';
+import { getExperienceToNextLevel } from '../../constants/game';
+import { COLORS } from '../../constants/colors';
 
-export default function ProfileScreen() {
+export default function ProfileTab() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
@@ -47,7 +47,7 @@ export default function ProfileScreen() {
           styles.scrollContent,
           {
             paddingTop: insets.top + 16,
-            paddingBottom: insets.bottom + 24,
+            paddingBottom: insets.bottom + 90,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -55,14 +55,7 @@ export default function ProfileScreen() {
         <Animated.View style={contentAnimatedStyle}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-            >
-              <Text style={styles.backIcon}>←</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Profile</Text>
-            <View style={styles.headerSpacer} />
+            <Text style={styles.headerTitle}>👤 Profile</Text>
           </View>
 
           {/* Profile Card */}
@@ -205,32 +198,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 24,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 20,
-    color: COLORS.text.primary,
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: COLORS.text.primary,
-  },
-  headerSpacer: {
-    width: 44,
   },
   profileCard: {
     marginBottom: 16,
@@ -346,3 +320,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
+

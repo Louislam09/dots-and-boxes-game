@@ -1,4 +1,4 @@
-// app/home.tsx - Home screen (Minimalist)
+// app/(tabs)/index.tsx - Home tab screen
 
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
@@ -10,16 +10,16 @@ import Animated, {
   withDelay,
   useSharedValue,
 } from 'react-native-reanimated';
-import { useAuth } from '../contexts/AuthContext';
-import { useSocket } from '../contexts/SocketContext';
-import { useGame } from '../contexts/GameContext';
-import { gameStorage, ActiveRoomData } from '../utils/storage';
-import { getExperienceToNextLevel } from '../constants/game';
-import { COLORS } from '../constants/colors';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { useGame } from '../../contexts/GameContext';
+import { gameStorage, ActiveRoomData } from '../../utils/storage';
+import { getExperienceToNextLevel } from '../../constants/game';
+import { COLORS } from '../../constants/colors';
 
 const { width } = Dimensions.get('window');
 
-export default function HomeScreen() {
+export default function HomeTab() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { joinRoom, isConnected } = useSocket();
@@ -81,7 +81,7 @@ export default function HomeScreen() {
           styles.scrollContent,
           {
             paddingTop: insets.top + 20,
-            paddingBottom: insets.bottom + 32,
+            paddingBottom: 32,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -89,10 +89,7 @@ export default function HomeScreen() {
         <Animated.View style={contentAnimatedStyle}>
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.push('/profile')}
-              style={styles.profileButton}
-            >
+            <View style={styles.userSection}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
                   {(user.displayName || user.username).charAt(0).toUpperCase()}
@@ -104,7 +101,7 @@ export default function HomeScreen() {
                   {user.displayName || user.username}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </View>
 
             <View style={styles.levelBadge}>
               <Text style={styles.levelText}>Lv. {user.level}</Text>
@@ -205,45 +202,14 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Quick Links */}
-          <View style={styles.linksSection}>
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => router.push('/leaderboard')}
-            >
-              <Text style={styles.linkIcon}>🏆</Text>
-              <Text style={styles.linkText}>Leaderboard</Text>
-              <Text style={styles.linkArrow}>→</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => router.push('/history')}
-            >
-              <Text style={styles.linkIcon}>📜</Text>
-              <Text style={styles.linkText}>Game History</Text>
-              <Text style={styles.linkArrow}>→</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => router.push('/achievements')}
-            >
-              <Text style={styles.linkIcon}>🏅</Text>
-              <Text style={styles.linkText}>Achievements</Text>
-              <Text style={styles.linkArrow}>→</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Sign Out */}
+          {/* Game History Link */}
           <TouchableOpacity
-            onPress={() => {
-              logout();
-              router.replace('/login');
-            }}
-            style={styles.signOutButton}
+            style={styles.historyButton}
+            onPress={() => router.push('/history')}
           >
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.historyIcon}>📜</Text>
+            <Text style={styles.historyText}>Game History</Text>
+            <Text style={styles.historyArrow}>→</Text>
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
@@ -263,9 +229,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 32,
   },
-  profileButton: {
+  userSection: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -309,7 +275,7 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
   actionsSection: {
-    marginBottom: 40,
+    marginBottom: 32,
     gap: 12,
   },
   primaryButton: {
@@ -396,7 +362,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   xpSection: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   xpHeader: {
     flexDirection: 'row',
@@ -423,36 +389,27 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent.primary,
     borderRadius: 3,
   },
-  linksSection: {
-    marginBottom: 32,
-    gap: 2,
-  },
-  linkButton: {
+  historyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.glass.border,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.glass.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
   },
-  linkIcon: {
+  historyIcon: {
     fontSize: 18,
-    marginRight: 14,
+    marginRight: 12,
   },
-  linkText: {
+  historyText: {
     flex: 1,
     fontSize: 15,
     color: COLORS.text.primary,
   },
-  linkArrow: {
+  historyArrow: {
     fontSize: 16,
-    color: COLORS.text.muted,
-  },
-  signOutButton: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  signOutText: {
-    fontSize: 14,
     color: COLORS.text.muted,
   },
   reconnectBanner: {
@@ -517,3 +474,4 @@ const styles = StyleSheet.create({
     color: COLORS.background.primary,
   },
 });
+

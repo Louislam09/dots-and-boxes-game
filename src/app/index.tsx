@@ -63,7 +63,7 @@ export default function Index() {
     if (!isLoading) {
       const timer = setTimeout(() => {
         if (isAuthenticated) {
-          router.replace('/home');
+          router.replace('/(tabs)');
         } else {
           router.replace('/login');
         }

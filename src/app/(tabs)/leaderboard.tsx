@@ -1,8 +1,7 @@
-// app/leaderboard.tsx - Leaderboard screen (Clean)
+// app/(tabs)/leaderboard.tsx - Leaderboard tab screen
 
 import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
@@ -10,10 +9,10 @@ import Animated, {
   withDelay,
   useSharedValue,
 } from 'react-native-reanimated';
-import { leaderboardService, LeaderboardType, LeaderboardEntry } from '../services/pocketbase/leaderboard';
-import { Avatar, GlassCard, LoadingSpinner } from '../components/ui';
-import { useAuth } from '../contexts/AuthContext';
-import { COLORS } from '../constants/colors';
+import { leaderboardService, LeaderboardType, LeaderboardEntry } from '../../services/pocketbase/leaderboard';
+import { Avatar, LoadingSpinner } from '../../components/ui';
+import { useAuth } from '../../contexts/AuthContext';
+import { COLORS } from '../../constants/colors';
 
 const TABS: { key: LeaderboardType; label: string }[] = [
   { key: 'wins', label: 'Wins' },
@@ -23,8 +22,7 @@ const TABS: { key: LeaderboardType; label: string }[] = [
   { key: 'level', label: 'Level' },
 ];
 
-export default function LeaderboardScreen() {
-  const router = useRouter();
+export default function LeaderboardTab() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
@@ -68,14 +66,7 @@ export default function LeaderboardScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Leaderboard</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.headerTitle}>🏆 Leaderboard</Text>
       </View>
 
       {/* Tabs */}
@@ -115,7 +106,7 @@ export default function LeaderboardScreen() {
         ) : (
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
           >
             {/* Top 3 Podium */}
             {top3.length >= 3 && (
@@ -144,7 +135,7 @@ export default function LeaderboardScreen() {
             {/* Rest of the list */}
             <View style={styles.listContainer}>
               {rest.map((entry) => (
-                <GlassCard
+                <View
                   key={entry.user.id}
                   style={[
                     styles.listItem,
@@ -170,7 +161,7 @@ export default function LeaderboardScreen() {
                       {formatValue(entry.value, activeTab)}
                     </Text>
                   </View>
-                </GlassCard>
+                </View>
               ))}
 
               {entries.length === 0 && (
@@ -234,33 +225,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background.primary,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 20,
-    color: COLORS.text.primary,
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: COLORS.text.primary,
-  },
-  headerSpacer: {
-    width: 44,
   },
   tabsContainer: {
     flexGrow: 0,
@@ -352,6 +324,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   listItem: {
+    backgroundColor: COLORS.glass.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.glass.border,
     padding: 12,
   },
   listItemCurrentUser: {
@@ -407,3 +383,4 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
   },
 });
+

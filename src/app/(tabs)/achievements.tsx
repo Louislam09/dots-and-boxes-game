@@ -1,8 +1,7 @@
-// app/achievements.tsx - Achievements screen (Clean)
+// app/(tabs)/achievements.tsx - Achievements tab screen
 
 import { useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
@@ -10,11 +9,11 @@ import Animated, {
   withDelay,
   useSharedValue,
 } from 'react-native-reanimated';
-import { useAuth } from '../contexts/AuthContext';
-import { GlassCard } from '../components/ui';
-import { ACHIEVEMENTS, getAchievementsByCategory } from '../constants/achievements';
-import { COLORS } from '../constants/colors';
-import type { AchievementCategory } from '../types/achievement';
+import { useAuth } from '../../contexts/AuthContext';
+import { GlassCard } from '../../components/ui';
+import { ACHIEVEMENTS, getAchievementsByCategory } from '../../constants/achievements';
+import { COLORS } from '../../constants/colors';
+import type { AchievementCategory } from '../../types/achievement';
 
 const CATEGORIES: { key: AchievementCategory; label: string }[] = [
   { key: 'games', label: 'Games Played' },
@@ -23,8 +22,7 @@ const CATEGORIES: { key: AchievementCategory; label: string }[] = [
   { key: 'special', label: 'Special' },
 ];
 
-export default function AchievementsScreen() {
-  const router = useRouter();
+export default function AchievementsTab() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
@@ -103,21 +101,14 @@ export default function AchievementsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Achievements</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.headerTitle}>🏅 Achievements</Text>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: insets.bottom + 24 },
+          { paddingBottom: insets.bottom + 90 },
         ]}
       >
         <Animated.View style={contentAnimatedStyle}>
@@ -209,33 +200,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 20,
-    color: COLORS.text.primary,
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: COLORS.text.primary,
-  },
-  headerSpacer: {
-    width: 44,
   },
   summaryCard: {
     alignItems: 'center',
@@ -361,3 +333,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
