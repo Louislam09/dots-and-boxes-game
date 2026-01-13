@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { View, Text, Share, StyleSheet, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
   withRepeat,
@@ -25,9 +26,19 @@ interface WaitingRoomProps {
 }
 
 export function WaitingRoom({ onLeave }: WaitingRoomProps) {
+  const router = useRouter();
   const { gameState } = useGame();
   const { user } = useAuth();
   const { startGame } = useSocket();
+
+  // Check if game is already in progress
+  const isGameInProgress = gameState?.status === 'playing';
+
+  const handleJoinGame = () => {
+    if (gameState?.roomCode) {
+      router.replace(`/game/${gameState.roomCode}`);
+    }
+  };
 
   // Animation values
   const contentOpacity = useSharedValue(0);
@@ -105,6 +116,27 @@ export function WaitingRoom({ onLeave }: WaitingRoomProps) {
         </Text>
       </View>
 
+      {/* Game In Progress Banner */}
+      {isGameInProgress && (
+        <GlassCard style={styles.gameInProgressCard}>
+          <View style={styles.gameInProgressContent}>
+            <Text style={styles.gameInProgressIcon}>🎮</Text>
+            <View style={styles.gameInProgressText}>
+              <Text style={styles.gameInProgressTitle}>Game In Progress!</Text>
+              <Text style={styles.gameInProgressSubtext}>
+                The game has already started
+              </Text>
+            </View>
+          </View>
+          <GlowButton
+            title="Join Game"
+            onPress={handleJoinGame}
+            fullWidth
+            size="lg"
+          />
+        </GlassCard>
+      )}
+
       {/* Players Section */}
       <GlassCard style={styles.playersCard}>
         <View style={styles.playersHeader}>
@@ -151,27 +183,31 @@ export function WaitingRoom({ onLeave }: WaitingRoomProps) {
 
       {/* Action Section */}
       <View style={styles.actions}>
-        {isOwner ? (
+        {!isGameInProgress && (
           <>
-            <GlowButton
-              title={canStart ? 'Start Game' : 'Waiting for players...'}
-              onPress={startGame}
-              disabled={!canStart}
-              fullWidth
-              size="lg"
-            />
-            {!canStart && (
-              <Text style={styles.actionHint}>
-                Need at least 2 players to start
-              </Text>
+            {isOwner ? (
+              <>
+                <GlowButton
+                  title={canStart ? 'Start Game' : 'Waiting for players...'}
+                  onPress={startGame}
+                  disabled={!canStart}
+                  fullWidth
+                  size="lg"
+                />
+                {!canStart && (
+                  <Text style={styles.actionHint}>
+                    Need at least 2 players to start
+                  </Text>
+                )}
+              </>
+            ) : (
+              <View style={styles.waitingBanner}>
+                <Text style={styles.waitingText}>
+                  Waiting for host to start...
+                </Text>
+              </View>
             )}
           </>
-        ) : (
-          <View style={styles.waitingBanner}>
-            <Text style={styles.waitingText}>
-              Waiting for host to start...
-            </Text>
-          </View>
         )}
 
         <GlowButton
@@ -360,6 +396,33 @@ const styles = StyleSheet.create({
   },
   waitingText: {
     fontSize: 14,
+    color: COLORS.text.secondary,
+  },
+  gameInProgressCard: {
+    marginBottom: 16,
+    borderColor: COLORS.status.success,
+    borderWidth: 1,
+  },
+  gameInProgressContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  gameInProgressIcon: {
+    fontSize: 32,
+    marginRight: 14,
+  },
+  gameInProgressText: {
+    flex: 1,
+  },
+  gameInProgressTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.status.success,
+    marginBottom: 2,
+  },
+  gameInProgressSubtext: {
+    fontSize: 13,
     color: COLORS.text.secondary,
   },
 });

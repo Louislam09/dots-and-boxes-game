@@ -34,6 +34,7 @@ export type SocketEventCallback = {
   onNewGameStarting?: () => void;
   onRejoinSuccess?: (data: { gameState: GameState; players: Player[] }) => void;
   onRejoinFailed?: (data: { reason: string }) => void;
+  onGameSync?: (data: { gameState: GameState; players: Player[]; scores: Record<string, number> }) => void;
   onRoomClosed?: (data: { reason: string }) => void;
   onError?: (data: { message: string; code: string }) => void;
   onConnect?: () => void;
@@ -172,6 +173,11 @@ class SocketService {
     this.socket.on(SERVER_EVENTS.REJOIN_FAILED, async (data) => {
       await gameStorage.clearGameState();
       this.callbacks.onRejoinFailed?.(data);
+    });
+
+    // Sync events (for late joiners)
+    this.socket.on(SERVER_EVENTS.GAME_SYNC, (data) => {
+      this.callbacks.onGameSync?.(data);
     });
 
     // Room events

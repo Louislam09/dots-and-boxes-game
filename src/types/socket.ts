@@ -36,6 +36,13 @@ export interface ServerToClientEvents {
   'rejoin-success': (data: { gameState: GameState; players: Player[] }) => void;
   'rejoin-failed': (data: { reason: string }) => void;
 
+  // Sync events (for late joiners)
+  'game-sync': (data: {
+    gameState: GameState;
+    players: Player[];
+    scores: Record<string, number>;
+  }) => void;
+
   // Error/Status events
   'room-closed': (data: { reason: string }) => void;
   'error': (data: { message: string; code: string }) => void;
@@ -44,7 +51,12 @@ export interface ServerToClientEvents {
 // Client to Server Events
 export interface ClientToServerEvents {
   // Room events
-  'join-room': (data: { roomCode: string; roomId: string }) => void;
+  'join-room': (data: {
+    roomCode: string;
+    roomId: string;
+    gameMode?: '1vs1' | '3players';
+    maxPlayers?: number;
+  }) => void;
   'leave-room': (data: { roomCode: string }) => void;
   'rejoin-room': (data: { roomCode: string; lastMoveId?: string }) => void;
 

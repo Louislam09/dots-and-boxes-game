@@ -18,6 +18,7 @@ export const SERVER_EVENTS = {
   PLAYER_DISCONNECTED: 'player-disconnected',
   PLAYER_RECONNECTED: 'player-reconnected',
   GAME_STARTED: 'game-started',
+  GAME_SYNC: 'game-sync',
   MOVE_MADE: 'move-made',
   GAME_OVER: 'game-over',
   PLAY_AGAIN_REQUESTED: 'play-again-requested',

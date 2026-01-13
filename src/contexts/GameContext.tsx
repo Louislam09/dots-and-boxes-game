@@ -29,7 +29,7 @@ interface GameContextValue {
   selectedDot: Dot | null;
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   initGame: (roomCode: string, roomId: string, gameMode: GameMode) => void;
   selectDot: (dot: Dot) => void;
@@ -47,7 +47,7 @@ interface GameProviderProps {
 export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
   const { user } = useAuth();
   const { setEventCallbacks, makeMove } = useSocket();
-  
+
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedDot, setSelectedDot] = useState<Dot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -181,7 +181,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       onGameStarted: ({ players, firstPlayerId }) => {
         // Update active room status
         gameStorage.updateActiveRoomStatus('playing');
-        
+
         setGameState((prev) => {
           if (!prev) return prev;
           return {
@@ -248,7 +248,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       onGameOver: ({ winner, isDraw, finalScores }) => {
         // Clear active room when game ends
         gameStorage.clearActiveRoom();
-        
+
         setGameState((prev) => {
           if (!prev) return prev;
 
@@ -296,6 +296,30 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
             ...prev,
             ...serverState,
             players,
+          };
+        });
+      },
+
+      onGameSync: ({ gameState: serverState, players, scores }) => {
+        // Sync game state for late joiners
+        console.log('Game sync received:', serverState.status);
+        setGameState((prev) => {
+          if (!prev) return prev;
+
+          // Update player scores
+          const updatedPlayers = players.map((p) => ({
+            ...p,
+            score: scores[p.id] ?? p.score,
+          }));
+
+          return {
+            ...prev,
+            status: serverState.status,
+            lines: serverState.lines || [],
+            currentTurnPlayerId: serverState.currentTurnPlayerId,
+            moveCount: serverState.moveCount || 0,
+            players: updatedPlayers,
+            startedAt: serverState.startedAt,
           };
         });
       },

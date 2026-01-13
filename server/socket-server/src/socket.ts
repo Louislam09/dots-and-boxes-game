@@ -136,6 +136,26 @@ export function setupSocketHandlers(io: Server) {
         const players = Array.from(room.players.values());
         io.to(roomCode).emit('player-joined', { player, players });
 
+        // If game is already in progress, send full game state to the joining player
+        if (room.gameState && room.gameState.status === 'playing') {
+          console.log(`Game already in progress, sending game state to ${user.displayName}`);
+          
+          // Send game-started first to transition to playing state
+          socket.emit('game-started', {
+            players,
+            firstPlayerId: room.gameState.currentTurnPlayerId,
+          });
+          
+          // Then send the full game state for sync
+          socket.emit('game-sync', {
+            gameState: room.gameState,
+            players,
+            scores: Object.fromEntries(
+              Array.from(room.players.values()).map(p => [p.id, p.score])
+            ),
+          });
+        }
+
         console.log(`${user.displayName} joined room ${roomCode} (${room.players.size}/${room.maxPlayers} players)`);
       } catch (error: any) {
         console.error('Join room error:', error?.message || error);
