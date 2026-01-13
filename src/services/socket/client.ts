@@ -192,10 +192,15 @@ class SocketService {
   /**
    * Join a room
    */
-  joinRoom(roomCode: string, roomId: string): void {
+  joinRoom(roomCode: string, roomId: string, gameMode?: '1vs1' | '3players', maxPlayers?: number): void {
     if (!this.socket) return;
     this.currentRoomCode = roomCode;
-    this.socket.emit(CLIENT_EVENTS.JOIN_ROOM, { roomCode, roomId });
+    this.socket.emit(CLIENT_EVENTS.JOIN_ROOM, { 
+      roomCode, 
+      roomId,
+      gameMode: gameMode || '1vs1',
+      maxPlayers: maxPlayers || 2,
+    });
   }
 
   /**

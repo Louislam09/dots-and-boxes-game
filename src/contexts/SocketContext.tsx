@@ -16,7 +16,7 @@ interface SocketContextValue {
   isConnected: boolean;
   connect: () => Promise<boolean>;
   disconnect: () => void;
-  joinRoom: (roomCode: string, roomId: string) => void;
+  joinRoom: (roomCode: string, roomId: string, gameMode?: '1vs1' | '3players', maxPlayers?: number) => void;
   leaveRoom: () => void;
   startGame: () => void;
   makeMove: (dot1Id: number, dot2Id: number) => void;
@@ -58,8 +58,8 @@ export function SocketProvider({ children }: SocketProviderProps) {
   }, []);
 
   // Join a room
-  const joinRoom = useCallback((roomCode: string, roomId: string) => {
-    socketService.joinRoom(roomCode, roomId);
+  const joinRoom = useCallback((roomCode: string, roomId: string, gameMode?: '1vs1' | '3players', maxPlayers?: number) => {
+    socketService.joinRoom(roomCode, roomId, gameMode, maxPlayers);
     setCurrentRoomCode(roomCode);
   }, []);
 

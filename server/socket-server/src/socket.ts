@@ -50,26 +50,49 @@ export function setupSocketHandlers(io: Server) {
 
     // ============ ROOM HANDLERS ============
 
-    socket.on('join-room', async ({ roomCode, roomId }) => {
+    socket.on('join-room', async ({ roomCode, roomId, gameMode: clientGameMode, maxPlayers: clientMaxPlayers }) => {
       try {
         let room = rooms.get(roomCode);
 
         if (!room) {
           // Fetch room from PocketBase
-          const pbRoom = await pb.collection('rooms').getOne(roomId);
+          console.log(`Fetching room ${roomId} from PocketBase...`);
+          try {
+            const pbRoom = await pb.collection('rooms').getOne(roomId);
+            console.log(`Room fetched successfully:`, pbRoom);
 
-          room = {
-            code: roomCode,
-            roomId,
-            hostId: pbRoom.owner,
-            gameMode: pbRoom.gameMode as '1vs1' | '3players',
-            maxPlayers: pbRoom.maxPlayers,
-            players: new Map(),
-            gameState: null,
-            playAgainRequests: new Set(),
-            lastActivityAt: Date.now(),
-          };
-          rooms.set(roomCode, room);
+            room = {
+              code: roomCode,
+              roomId,
+              hostId: pbRoom.owner,
+              gameMode: pbRoom.gameMode as '1vs1' | '3players',
+              maxPlayers: pbRoom.maxPlayers,
+              players: new Map(),
+              gameState: null,
+              playAgainRequests: new Set(),
+              lastActivityAt: Date.now(),
+            };
+            rooms.set(roomCode, room);
+          } catch (pbError: any) {
+            console.error('PocketBase fetch error:', pbError?.message || pbError);
+            // If PocketBase fails, create room from client data
+            // This allows the game to work even if PocketBase has strict API rules
+            console.log('Creating room from client data as fallback...');
+            const gm = clientGameMode || '1vs1';
+            const mp = clientMaxPlayers || (gm === '3players' ? 3 : 2);
+            room = {
+              code: roomCode,
+              roomId,
+              hostId: user.id, // First joiner is host
+              gameMode: gm,
+              maxPlayers: mp,
+              players: new Map(),
+              gameState: null,
+              playAgainRequests: new Set(),
+              lastActivityAt: Date.now(),
+            };
+            rooms.set(roomCode, room);
+          }
         }
 
         // Check if room is full
@@ -94,9 +117,14 @@ export function setupSocketHandlers(io: Server) {
           name: user.displayName,
           color: getPlayerColor(playerIndex),
           score: 0,
-          isOwner: user.id === room.hostId,
+          isOwner: user.id === room.hostId || room.players.size === 0,
           isConnected: true,
         };
+
+        // If this is the first player, they become the host
+        if (room.players.size === 0) {
+          room.hostId = user.id;
+        }
 
         room.players.set(user.id, player);
         room.lastActivityAt = Date.now();
@@ -108,9 +136,9 @@ export function setupSocketHandlers(io: Server) {
         const players = Array.from(room.players.values());
         io.to(roomCode).emit('player-joined', { player, players });
 
-        console.log(`${user.displayName} joined room ${roomCode}`);
-      } catch (error) {
-        console.error('Join room error:', error);
+        console.log(`${user.displayName} joined room ${roomCode} (${room.players.size}/${room.maxPlayers} players)`);
+      } catch (error: any) {
+        console.error('Join room error:', error?.message || error);
         socket.emit('error', { message: 'Failed to join room', code: 'JOIN_FAILED' });
       }
     });

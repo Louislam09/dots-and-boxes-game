@@ -53,8 +53,9 @@ export default function CreateRoomScreen() {
       });
 
       if (result.success && result.room) {
+        const maxPlayers = gameMode === '3players' ? 3 : 2;
         initGame(result.room.code, result.room.id, gameMode);
-        joinRoom(result.room.code, result.room.id);
+        joinRoom(result.room.code, result.room.id, gameMode, maxPlayers);
         router.push(`/lobby/${result.room.code}`);
       } else {
         showError(result.error || 'Failed to create room');

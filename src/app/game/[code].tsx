@@ -30,7 +30,7 @@ export default function GameScreen() {
 
   const [showGameOver, setShowGameOver] = useState(false);
   const screenWidth = Dimensions.get('window').width;
-  const boardSize = Math.min(screenWidth - 32, 380);
+  const boardSize = screenWidth - 32; // Full width minus padding
 
   // Animation values
   const contentOpacity = useSharedValue(0);
@@ -217,11 +217,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   boardWrapper: {
-    padding: 8,
     borderRadius: 16,
-    backgroundColor: COLORS.glass.background,
-    borderWidth: 1,
-    borderColor: COLORS.glass.border,
+    overflow: 'hidden',
   },
   helperSection: {
     paddingHorizontal: 16,

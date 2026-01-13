@@ -23,6 +23,11 @@ export function Square({ square, dots, spacing }: SquareProps) {
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.8);
 
+  // All hooks must be called before any early returns
+  const animatedProps = useAnimatedProps(() => ({
+    opacity: opacity.value,
+  }));
+
   useEffect(() => {
     if (square.isComplete) {
       opacity.value = withSequence(
@@ -36,17 +41,13 @@ export function Square({ square, dots, spacing }: SquareProps) {
     }
   }, [square.isComplete]);
 
+  // Early returns must come AFTER all hooks
   if (!square.isComplete || !square.color) return null;
 
   const topLeftDot = dots[square.topLeftDotId];
   if (!topLeftDot) return null;
 
-  const { BOARD_PADDING } = GAME_CONFIG;
   const padding = 2;
-
-  const animatedProps = useAnimatedProps(() => ({
-    opacity: opacity.value,
-  }));
 
   return (
     <AnimatedRect

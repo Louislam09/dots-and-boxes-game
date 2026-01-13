@@ -32,9 +32,11 @@ export function Toast({
 }: ToastProps) {
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     if (visible) {
+      setShouldRender(true);
       translateY.value = withSpring(0, { damping: 15, stiffness: 200 });
       opacity.value = withTiming(1, { duration: 200 });
 
@@ -49,6 +51,7 @@ export function Toast({
   const hide = () => {
     translateY.value = withTiming(-100, { duration: 200 });
     opacity.value = withTiming(0, { duration: 200 }, () => {
+      runOnJS(setShouldRender)(false);
       runOnJS(onHide)();
     });
   };
@@ -92,7 +95,7 @@ export function Toast({
     }
   };
 
-  if (!visible && opacity.value === 0) return null;
+  if (!shouldRender) return null;
 
   const config = getTypeConfig();
 

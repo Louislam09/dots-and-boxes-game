@@ -96,8 +96,9 @@ export default function JoinRoomScreen() {
       const result = await roomService.joinRoom(roomCode);
 
       if (result.success && result.room) {
-        initGame(result.room.code, result.room.id, result.room.gameMode as '1vs1' | '3players');
-        joinRoom(result.room.code, result.room.id);
+        const gm = result.room.gameMode as '1vs1' | '3players';
+        initGame(result.room.code, result.room.id, gm);
+        joinRoom(result.room.code, result.room.id, gm, result.room.maxPlayers);
         router.push(`/lobby/${result.room.code}`);
       } else {
         setError(result.error || 'Room not found');

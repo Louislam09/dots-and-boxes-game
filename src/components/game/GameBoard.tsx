@@ -18,19 +18,34 @@ interface GameBoardProps {
 export function GameBoard({ size: propSize }: GameBoardProps) {
   const { gameState, selectedDot, isMyTurn, selectDot, myPlayer } = useGame();
 
-  // Calculate board size
+  // Calculate board size - use full width if no prop provided
   const screenWidth = Dimensions.get('window').width;
-  const size = propSize || Math.min(screenWidth - 40, 400);
+  const size = propSize || screenWidth - 32;
 
   const { GRID_SIZE, BOARD_PADDING } = GAME_CONFIG;
   const spacing = (size - BOARD_PADDING * 2) / (GRID_SIZE - 1);
 
-  // Get adjacent dots for preview line
+  // Recalculate dot positions based on actual render size
+  const scaledDots = useMemo(() => {
+    if (!gameState?.dots) return [];
+    return gameState.dots.map((dot) => ({
+      ...dot,
+      x: BOARD_PADDING + dot.col * spacing,
+      y: BOARD_PADDING + dot.row * spacing,
+    }));
+  }, [gameState?.dots, spacing]);
+
+  // Get the scaled version of selected dot
+  const scaledSelectedDot = useMemo(() => {
+    if (!selectedDot) return null;
+    return scaledDots.find(d => d.id === selectedDot.id) || null;
+  }, [selectedDot, scaledDots]);
+
+  // Get adjacent dots for preview line (using scaled positions)
   const adjacentDots = useMemo(() => {
-    if (!selectedDot || !gameState) return [];
+    if (!scaledSelectedDot || !gameState) return [];
 
     const adjacent: DotType[] = [];
-    const { dots } = gameState;
 
     const directions = [
       { row: -1, col: 0 },
@@ -40,8 +55,8 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
     ];
 
     for (const dir of directions) {
-      const newRow = selectedDot.row + dir.row;
-      const newCol = selectedDot.col + dir.col;
+      const newRow = scaledSelectedDot.row + dir.row;
+      const newCol = scaledSelectedDot.col + dir.col;
 
       if (
         newRow >= 0 &&
@@ -50,16 +65,16 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
         newCol < GRID_SIZE
       ) {
         const adjacentId = newRow * GRID_SIZE + newCol;
-        const adjacentDot = dots[adjacentId];
+        const adjacentDot = scaledDots[adjacentId];
 
-        if (adjacentDot && !selectedDot.connectedTo.includes(adjacentId)) {
+        if (adjacentDot && !scaledSelectedDot.connectedTo.includes(adjacentId)) {
           adjacent.push(adjacentDot);
         }
       }
     }
 
     return adjacent;
-  }, [selectedDot, gameState]);
+  }, [scaledSelectedDot, scaledDots, gameState]);
 
   if (!gameState) {
     return (
@@ -75,7 +90,7 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
     );
   }
 
-  const { dots, lines, squares, status } = gameState;
+  const { lines, squares, status } = gameState;
   const isInteractive = status === 'playing' && isMyTurn;
 
   return (
@@ -102,17 +117,17 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
           <Square
             key={`square-${square.id}`}
             square={square}
-            dots={dots}
+            dots={scaledDots}
             spacing={spacing}
           />
         ))}
 
         {/* Preview lines for adjacent dots */}
-        {selectedDot &&
+        {scaledSelectedDot &&
           adjacentDots.map((adjDot) => (
             <PreviewLine
               key={`preview-${adjDot.id}`}
-              dot1={selectedDot}
+              dot1={scaledSelectedDot}
               dot2={adjDot}
               color={myPlayer?.color}
             />
@@ -123,13 +138,13 @@ export function GameBoard({ size: propSize }: GameBoardProps) {
           <Line
             key={`line-${line.id}`}
             line={line}
-            dots={dots}
+            dots={scaledDots}
           />
         ))}
       </Svg>
 
       {/* Dots Layer (interactive) */}
-      {dots.map((dot) => (
+      {scaledDots.map((dot) => (
         <Dot
           key={`dot-${dot.id}`}
           dot={dot}
