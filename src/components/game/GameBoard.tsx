@@ -123,6 +123,7 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
             square={square}
             dots={scaledDots}
             spacing={spacing}
+            players={gameState.players}
           />
         ))}
 
