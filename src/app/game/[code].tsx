@@ -54,15 +54,29 @@ export default function GameScreen() {
     }
   }, [gameState?.status]);
 
-  // Handle back button
+  // Handle back button - block during gameplay to avoid confusion with drag gestures
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Block back gesture during active gameplay
+      if (gameState?.status === 'playing') {
+        // Show subtle feedback that back is disabled
+        showInfo('Use the back button to leave the game');
+        return true; // Prevent default back behavior
+      }
+
+      // Allow back when game is finished
+      if (gameState?.status === 'finished') {
+        handleLeave();
+        return true;
+      }
+
+      // For other states (waiting), show confirmation
       confirmLeave();
       return true;
     });
 
     return () => backHandler.remove();
-  }, []);
+  }, [gameState?.status]);
 
   const confirmLeave = () => {
     // Don't confirm if game is already over

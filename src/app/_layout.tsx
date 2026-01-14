@@ -55,7 +55,12 @@ export default function RootLayout() {
               <Stack.Screen name="create-room" />
               <Stack.Screen name="join-room" />
               <Stack.Screen name="lobby/[code]" />
-              <Stack.Screen name="game/[code]" />
+              <Stack.Screen 
+                name="game/[code]" 
+                options={{
+                  gestureEnabled: false, // Disable swipe-back to avoid confusion with drag gestures
+                }}
+              />
               <Stack.Screen name="history" />
             </Stack>
           </View>
