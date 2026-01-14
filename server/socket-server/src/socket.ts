@@ -44,8 +44,8 @@ const rooms = new Map<string, RoomState>();
 // Pending move locks
 const pendingMoves = new Map<string, boolean>();
 
-// Disconnect timers
-const disconnectTimers = new Map<string, NodeJS.Timeout>();
+// Disconnect timers (use ReturnType for Bun/Node compatibility)
+const disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function setupSocketHandlers(io: Server) {
   io.on('connection', (socket: Socket) => {
