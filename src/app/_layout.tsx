@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppProviders } from '../contexts';
@@ -23,41 +24,43 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <AppProviders>
-        <View style={{ flex: 1, backgroundColor: COLORS.background.primary }}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: COLORS.background.primary },
-              animation: 'slide_from_right',
-            }}
-          >
-            {/* Tabs group */}
-            <Stack.Screen 
-              name="(tabs)" 
-              options={{ 
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AppProviders>
+          <View style={{ flex: 1, backgroundColor: COLORS.background.primary }}>
+            <StatusBar style="light" />
+            <Stack
+              screenOptions={{
                 headerShown: false,
-                animation: 'fade',
-              }} 
-            />
-            
-            {/* Auth screens */}
-            <Stack.Screen name="index" options={{ animation: 'fade' }} />
-            <Stack.Screen name="login" />
-            <Stack.Screen name="register" />
-            <Stack.Screen name="forgot-password" />
-            
-            {/* Game screens */}
-            <Stack.Screen name="create-room" />
-            <Stack.Screen name="join-room" />
-            <Stack.Screen name="lobby/[code]" />
-            <Stack.Screen name="game/[code]" />
-            <Stack.Screen name="history" />
-          </Stack>
-        </View>
-      </AppProviders>
-    </SafeAreaProvider>
+                contentStyle: { backgroundColor: COLORS.background.primary },
+                animation: 'slide_from_right',
+              }}
+            >
+              {/* Tabs group */}
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  headerShown: false,
+                  animation: 'fade',
+                }}
+              />
+
+              {/* Auth screens */}
+              <Stack.Screen name="index" options={{ animation: 'fade' }} />
+              <Stack.Screen name="login" />
+              <Stack.Screen name="register" />
+              <Stack.Screen name="forgot-password" />
+
+              {/* Game screens */}
+              <Stack.Screen name="create-room" />
+              <Stack.Screen name="join-room" />
+              <Stack.Screen name="lobby/[code]" />
+              <Stack.Screen name="game/[code]" />
+              <Stack.Screen name="history" />
+            </Stack>
+          </View>
+        </AppProviders>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

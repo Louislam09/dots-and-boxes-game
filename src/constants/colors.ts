@@ -65,6 +65,7 @@ export const COLORS = {
     dotHover: '#00D9FF',
     line: '#94A3B8',
     lineActive: '#00D9FF',
+    gridLine: '#CBD5E1', // Shadow/guide lines showing possible connections
     board: 'rgba(255, 255, 255, 0.03)',
     boardBorder: 'rgba(255, 255, 255, 0.1)',
     square: {

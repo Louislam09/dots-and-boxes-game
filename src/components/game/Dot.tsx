@@ -1,4 +1,4 @@
-// components/game/Dot.tsx - Individual dot component with rotating preview indicator
+// components/game/Dot.tsx - Individual dot with rotating preview + hover state
 
 import React, { memo, useCallback, useMemo, useEffect } from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  withSpring,
   Easing,
   cancelAnimation,
 } from 'react-native-reanimated';
@@ -17,12 +18,13 @@ import type { Dot as DotType } from '../../types/game';
 interface DotProps {
   dot: DotType;
   isSelected: boolean;
-  isPreview: boolean;  // New: is this an adjacent dot that can be connected?
+  isPreview: boolean;
+  isHovered?: boolean;  // New: dot is being hovered during drag
   isInteractive: boolean;
   onPress: (dot: DotType) => void;
   dotSize: number;
   hitArea: number;
-  previewColor?: string;  // Color for the preview ring
+  previewColor?: string;
 }
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -31,6 +33,7 @@ export const Dot = memo(function Dot({
   dot, 
   isSelected, 
   isPreview,
+  isHovered,
   isInteractive, 
   onPress,
   dotSize,
@@ -45,6 +48,7 @@ export const Dot = memo(function Dot({
 
   // Rotation animation for preview ring
   const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
 
   useEffect(() => {
     if (isPreview) {
@@ -54,7 +58,7 @@ export const Dot = memo(function Dot({
           duration: 2000,
           easing: Easing.linear,
         }),
-        -1, // Infinite
+        -1,
         false
       );
     } else {
@@ -67,8 +71,23 @@ export const Dot = memo(function Dot({
     };
   }, [isPreview]);
 
+  // Scale animation for hover/selected state - bigger when drawing
+  useEffect(() => {
+    if (isHovered) {
+      scale.value = withSpring(1.5, { damping: 10, stiffness: 180 });
+    } else if (isSelected) {
+      scale.value = withSpring(1.4, { damping: 10, stiffness: 180 });
+    } else {
+      scale.value = withSpring(1, { damping: 12, stiffness: 200 });
+    }
+  }, [isHovered, isSelected]);
+
   const previewRingStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  const dotAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
   }));
 
   // Memoize styles
@@ -82,22 +101,25 @@ export const Dot = memo(function Dot({
     top: dot.y - hitArea / 2,
   }), [dot.x, dot.y, hitArea]);
 
-  const dotStyle = useMemo(() => ({
+  const dotBaseStyle = useMemo(() => ({
     width: dotSize,
     height: dotSize,
     borderRadius: dotSize / 2,
-    backgroundColor: isSelected ? COLORS.game.dotActive : COLORS.game.dot,
+    backgroundColor: isHovered 
+      ? (previewColor || COLORS.accent.primary)
+      : isSelected 
+        ? COLORS.game.dotActive 
+        : COLORS.game.dot,
     borderWidth: 2,
-    borderColor: isSelected ? COLORS.accent.primary : COLORS.glass.borderLight,
-    transform: isSelected ? [{ scale: 1.2 }] : [],
+    borderColor: isHovered || isSelected ? (previewColor || COLORS.accent.primary) : COLORS.glass.borderLight,
     opacity: isInteractive ? 1 : 0.6,
-  }), [dotSize, isSelected, isInteractive]);
+  }), [dotSize, isSelected, isHovered, isInteractive, previewColor]);
 
-  // Preview ring size (larger than dot)
+  // Preview ring size
   const ringSize = dotSize + 16;
   const ringRadius = (ringSize - 3) / 2;
   const circumference = 2 * Math.PI * ringRadius;
-  const dashLength = circumference / 8; // 8 dashes
+  const dashLength = circumference / 8;
 
   return (
     <Pressable
@@ -107,7 +129,7 @@ export const Dot = memo(function Dot({
       hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
     >
       {/* Rotating preview ring */}
-      {isPreview && (
+      {isPreview && !isHovered && (
         <AnimatedView 
           style={[
             styles.previewRingContainer,
@@ -129,9 +151,26 @@ export const Dot = memo(function Dot({
           </Svg>
         </AnimatedView>
       )}
+
+      {/* Hover glow ring */}
+      {isHovered && (
+        <View 
+          style={[
+            styles.hoverRingContainer,
+            { 
+              width: ringSize + 8, 
+              height: ringSize + 8,
+              borderRadius: (ringSize + 8) / 2,
+              backgroundColor: previewColor || COLORS.accent.primary,
+            },
+          ]}
+        />
+      )}
       
       {/* Main dot */}
-      <View style={dotStyle} />
+      <AnimatedView style={dotAnimatedStyle}>
+        <View style={dotBaseStyle} />
+      </AnimatedView>
     </Pressable>
   );
 });
@@ -141,6 +180,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  hoverRingContainer: {
+    position: 'absolute',
+    opacity: 0.3,
   },
 });
 
