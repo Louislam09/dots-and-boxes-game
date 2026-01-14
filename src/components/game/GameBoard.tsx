@@ -4,7 +4,7 @@ import React, { useMemo, memo } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Svg from 'react-native-svg';
 import { Dot } from './Dot';
-import { EdgeLine, EdgePreviewLine } from './Line';
+import { EdgeLine } from './Line';
 import { Square } from './Square';
 import { GAME_CONFIG, getResponsiveSizes } from '../../constants/game';
 import { COLORS } from '../../constants/colors';
@@ -62,34 +62,34 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
     return new Set(edges.map(e => e.id));
   }, [edges]);
 
-  // Get preview edges for adjacent unconnected dots - edge-based, O(1) per direction
-  const previewEdges = useMemo(() => {
-    if (!scaledSelectedDot) return [];
+  // Get IDs of dots that should show preview ring (adjacent, unconnected dots)
+  const previewDotIds = useMemo(() => {
+    if (!scaledSelectedDot) return new Set<number>();
 
     const { row, col, connectedTo } = scaledSelectedDot;
-    const previews: { row: number; col: number; dir: 'H' | 'V' }[] = [];
+    const previewIds = new Set<number>();
 
-    // Check all 4 directions directly using dynamic grid size
+    // Check all 4 directions
     const checks = [
-      { r: row - 1, c: col, dir: 'V' as const, edgeRow: row - 1, edgeCol: col },     // top
-      { r: row + 1, c: col, dir: 'V' as const, edgeRow: row, edgeCol: col },         // bottom
-      { r: row, c: col - 1, dir: 'H' as const, edgeRow: row, edgeCol: col - 1 },     // left
-      { r: row, c: col + 1, dir: 'H' as const, edgeRow: row, edgeCol: col },         // right
+      { r: row - 1, c: col, edgeDir: 'V', edgeRow: row - 1, edgeCol: col },     // top
+      { r: row + 1, c: col, edgeDir: 'V', edgeRow: row, edgeCol: col },         // bottom
+      { r: row, c: col - 1, edgeDir: 'H', edgeRow: row, edgeCol: col - 1 },     // left
+      { r: row, c: col + 1, edgeDir: 'H', edgeRow: row, edgeCol: col },         // right
     ];
 
-    for (const { r, c, dir, edgeRow, edgeCol } of checks) {
+    for (const { r, c, edgeDir, edgeRow, edgeCol } of checks) {
       // Use dynamic grid bounds
       if (r >= 0 && r < gridRows && c >= 0 && c < gridCols) {
         const id = r * gridCols + c;
         // Check both connectedTo AND edgeSet to handle race conditions
-        const edgeKey = `${dir}-${edgeRow}-${edgeCol}`;
+        const edgeKey = `${edgeDir}-${edgeRow}-${edgeCol}`;
         if (!connectedTo.includes(id) && !edgeSet.has(edgeKey)) {
-          previews.push({ row: edgeRow, col: edgeCol, dir });
+          previewIds.add(id);
         }
       }
     }
 
-    return previews;
+    return previewIds;
   }, [scaledSelectedDot, gridRows, gridCols, edgeSet]);
 
   if (!gameState) {
@@ -140,20 +140,6 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
           />
         ))}
 
-        {/* Preview lines for adjacent dots - edge-based */}
-        {previewEdges.map((preview) => (
-          <EdgePreviewLine
-            key={`preview-${preview.dir}-${preview.row}-${preview.col}`}
-            row={preview.row}
-            col={preview.col}
-            dir={preview.dir}
-            spacing={spacing}
-            padding={BOARD_PADDING}
-            lineWidth={lineWidth}
-            color={myPlayer?.color}
-          />
-        ))}
-
         {/* Drawn lines - edge-based rendering */}
         {edges.map((edge) => (
           <EdgeLine
@@ -166,16 +152,18 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
         ))}
       </Svg>
 
-      {/* Dots Layer (interactive) */}
+      {/* Dots Layer (interactive) with rotating preview indicators */}
       {scaledDots.map((dot) => (
         <Dot
           key={`dot-${dot.id}`}
           dot={dot}
           isSelected={selectedDot?.id === dot.id}
+          isPreview={previewDotIds.has(dot.id)}
           isInteractive={isInteractive}
           onPress={selectDot}
           dotSize={dotSize}
           hitArea={hitArea}
+          previewColor={myPlayer?.color}
         />
       ))}
     </View>

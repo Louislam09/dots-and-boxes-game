@@ -1,12 +1,23 @@
-// components/game/Line.tsx - Line components (Edge-based, Optimized)
+// components/game/Line.tsx - Line components with draw animation (Edge-based, Optimized)
 
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useEffect } from 'react';
 import { Line as SvgLine } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  withSpring,
+  withSequence,
+  Easing,
+} from 'react-native-reanimated';
 import { COLORS } from '../../constants/colors';
 import { edgeToCoords } from '../../constants/game';
 import type { Edge, Line as LineType, Dot as DotType } from '../../types/game';
 
-// ============ EDGE-BASED LINE (FAST) ============
+// Create animated SVG line
+const AnimatedLine = Animated.createAnimatedComponent(SvgLine);
+
+// ============ EDGE-BASED LINE WITH DRAW ANIMATION ============
 // Pure math positioning - no dot lookups needed
 
 interface EdgeLineProps {
@@ -16,9 +27,9 @@ interface EdgeLineProps {
   lineWidth: number;
 }
 
-export const EdgeLine = memo(function EdgeLine({ 
-  edge, 
-  spacing, 
+export const EdgeLine = memo(function EdgeLine({
+  edge,
+  spacing,
   padding,
   lineWidth,
 }: EdgeLineProps) {
@@ -28,21 +39,79 @@ export const EdgeLine = memo(function EdgeLine({
     [edge.row, edge.col, edge.dir, spacing, padding]
   );
 
+  // Calculate line length for dash animation
+  const lineLength = spacing;
+
+  // Animation values
+  const dashOffset = useSharedValue(lineLength);
+  const opacity = useSharedValue(0);
+  const glowOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    // Draw animation: line appears to draw from start to end
+    dashOffset.value = withTiming(0, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+
+    // Fade in
+    opacity.value = withTiming(edge.isOptimistic ? 0.7 : 0.95, {
+      duration: 150,
+    });
+
+    // Glow effect on new lines
+    glowOpacity.value = withSequence(
+      withTiming(0.6, { duration: 100 }),
+      withTiming(0, { duration: 300 })
+    );
+  }, []);
+
+  // When optimistic status changes, update opacity
+  useEffect(() => {
+    if (!edge.isOptimistic) {
+      opacity.value = withTiming(0.95, { duration: 150 });
+    }
+  }, [edge.isOptimistic]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: dashOffset.value,
+    opacity: opacity.value,
+  }));
+
+  const glowAnimatedProps = useAnimatedProps(() => ({
+    opacity: glowOpacity.value,
+  }));
+
   return (
-    <SvgLine
-      x1={coords.x1}
-      y1={coords.y1}
-      x2={coords.x2}
-      y2={coords.y2}
-      stroke={edge.color}
-      strokeWidth={lineWidth}
-      strokeLinecap="round"
-      opacity={edge.isOptimistic ? 0.7 : 0.9}
-    />
+    <>
+      {/* Glow effect layer */}
+      <AnimatedLine
+        x1={coords.x1}
+        y1={coords.y1}
+        x2={coords.x2}
+        y2={coords.y2}
+        stroke={edge.color}
+        strokeWidth={lineWidth + 8}
+        strokeLinecap="round"
+        animatedProps={glowAnimatedProps}
+      />
+      {/* Main line with draw animation */}
+      <AnimatedLine
+        x1={coords.x1}
+        y1={coords.y1}
+        x2={coords.x2}
+        y2={coords.y2}
+        stroke={edge.color}
+        strokeWidth={lineWidth}
+        strokeLinecap="round"
+        strokeDasharray={lineLength}
+        animatedProps={animatedProps}
+      />
+    </>
   );
 });
 
-// ============ EDGE-BASED PREVIEW LINE ============
+// ============ EDGE-BASED PREVIEW LINE WITH PULSE ============
 
 interface EdgePreviewLineProps {
   row: number;
@@ -68,8 +137,28 @@ export const EdgePreviewLine = memo(function EdgePreviewLine({
     [row, col, dir, spacing, padding]
   );
 
+  // Subtle pulse animation for preview
+  const opacity = useSharedValue(0.3);
+  const dashOffset = useSharedValue(0);
+
+  useEffect(() => {
+    // Fade in
+    opacity.value = withTiming(0.5, { duration: 150 });
+
+    // Animated dash movement
+    dashOffset.value = withTiming(-24, {
+      duration: 800,
+      easing: Easing.linear,
+    });
+  }, []);
+
+  const animatedProps = useAnimatedProps(() => ({
+    opacity: opacity.value,
+    strokeDashoffset: dashOffset.value,
+  }));
+
   return (
-    <SvgLine
+    <AnimatedLine
       x1={coords.x1}
       y1={coords.y1}
       x2={coords.x2}
@@ -78,7 +167,7 @@ export const EdgePreviewLine = memo(function EdgePreviewLine({
       strokeWidth={lineWidth - 1}
       strokeLinecap="round"
       strokeDasharray="8,4"
-      opacity={0.5}
+      animatedProps={animatedProps}
     />
   );
 });
@@ -97,8 +186,30 @@ export const Line = memo(function Line({ line, dots, lineWidth = 5 }: LineProps)
 
   if (!dot1 || !dot2) return null;
 
+  // Calculate line length
+  const dx = dot2.x - dot1.x;
+  const dy = dot2.y - dot1.y;
+  const lineLength = Math.sqrt(dx * dx + dy * dy);
+
+  // Animation values
+  const dashOffset = useSharedValue(lineLength);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    dashOffset.value = withTiming(0, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+    });
+    opacity.value = withTiming(0.9, { duration: 150 });
+  }, []);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: dashOffset.value,
+    opacity: opacity.value,
+  }));
+
   return (
-    <SvgLine
+    <AnimatedLine
       x1={dot1.x}
       y1={dot1.y}
       x2={dot2.x}
@@ -106,7 +217,8 @@ export const Line = memo(function Line({ line, dots, lineWidth = 5 }: LineProps)
       stroke={line.color}
       strokeWidth={lineWidth}
       strokeLinecap="round"
-      opacity={0.9}
+      strokeDasharray={lineLength}
+      animatedProps={animatedProps}
     />
   );
 });
@@ -118,14 +230,24 @@ interface PreviewLineProps {
   lineWidth?: number;
 }
 
-export const PreviewLine = memo(function PreviewLine({ 
-  dot1, 
-  dot2, 
+export const PreviewLine = memo(function PreviewLine({
+  dot1,
+  dot2,
   color,
   lineWidth = 4,
 }: PreviewLineProps) {
+  const opacity = useSharedValue(0.3);
+
+  useEffect(() => {
+    opacity.value = withTiming(0.5, { duration: 150 });
+  }, []);
+
+  const animatedProps = useAnimatedProps(() => ({
+    opacity: opacity.value,
+  }));
+
   return (
-    <SvgLine
+    <AnimatedLine
       x1={dot1.x}
       y1={dot1.y}
       x2={dot2.x}
@@ -134,7 +256,7 @@ export const PreviewLine = memo(function PreviewLine({
       strokeWidth={lineWidth}
       strokeLinecap="round"
       strokeDasharray="8,4"
-      opacity={0.5}
+      animatedProps={animatedProps}
     />
   );
 });
