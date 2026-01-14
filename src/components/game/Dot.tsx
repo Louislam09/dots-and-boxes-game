@@ -1,60 +1,60 @@
-// components/game/Dot.tsx - Individual dot with rotating preview + hover state
+// components/game/Dot.tsx - SVG-based dot with rotating preview + hover state
 
-import React, { memo, useCallback, useMemo, useEffect } from 'react';
-import { Pressable, View, StyleSheet } from 'react-native';
+import React, { memo, useEffect, useMemo } from 'react';
 import Animated, {
   useSharedValue,
-  useAnimatedStyle,
+  useAnimatedProps,
   withRepeat,
   withTiming,
   withSpring,
   Easing,
   cancelAnimation,
+  interpolate,
 } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
+import { Circle, G } from 'react-native-svg';
 import { COLORS } from '../../constants/colors';
 import type { Dot as DotType } from '../../types/game';
+
+// Create animated SVG components
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface DotProps {
   dot: DotType;
   isSelected: boolean;
   isPreview: boolean;
-  isHovered?: boolean;  // New: dot is being hovered during drag
+  isHovered?: boolean;
   isInteractive: boolean;
-  onPress: (dot: DotType) => void;
   dotSize: number;
-  hitArea: number;
   previewColor?: string;
 }
 
-const AnimatedView = Animated.createAnimatedComponent(View);
-
-export const Dot = memo(function Dot({ 
-  dot, 
-  isSelected, 
+export const Dot = memo(function Dot({
+  dot,
+  isSelected,
   isPreview,
   isHovered,
-  isInteractive, 
-  onPress,
+  isInteractive,
   dotSize,
-  hitArea,
   previewColor,
 }: DotProps) {
-  const handlePress = useCallback(() => {
-    if (isInteractive) {
-      onPress(dot);
-    }
-  }, [isInteractive, onPress, dot]);
-
-  // Rotation animation for preview ring
-  const rotation = useSharedValue(0);
+  // Animation values
+  const dashOffset = useSharedValue(0);
   const scale = useSharedValue(1);
 
+  // Dot radius
+  const baseRadius = dotSize / 2;
+
+  // Preview ring calculations
+  const ringRadius = baseRadius + 10;
+  const circumference = useMemo(() => 2 * Math.PI * ringRadius, [ringRadius]);
+  const dashLength = circumference / 8;
+
+  // Rotation animation using strokeDashoffset
   useEffect(() => {
     if (isPreview) {
-      rotation.value = 0;
-      rotation.value = withRepeat(
-        withTiming(360, {
+      dashOffset.value = 0;
+      dashOffset.value = withRepeat(
+        withTiming(circumference, {
           duration: 2000,
           easing: Easing.linear,
         }),
@@ -62,16 +62,16 @@ export const Dot = memo(function Dot({
         false
       );
     } else {
-      cancelAnimation(rotation);
-      rotation.value = 0;
+      cancelAnimation(dashOffset);
+      dashOffset.value = 0;
     }
 
     return () => {
-      cancelAnimation(rotation);
+      cancelAnimation(dashOffset);
     };
-  }, [isPreview]);
+  }, [isPreview, circumference]);
 
-  // Scale animation for hover/selected state - bigger when drawing
+  // Scale animation for hover/selected state
   useEffect(() => {
     if (isHovered) {
       scale.value = withSpring(1.5, { damping: 10, stiffness: 180 });
@@ -82,109 +82,82 @@ export const Dot = memo(function Dot({
     }
   }, [isHovered, isSelected]);
 
-  const previewRingStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
+  // Animated props for the main dot
+  const animatedDotProps = useAnimatedProps(() => ({
+    r: baseRadius * scale.value,
   }));
 
-  const dotAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+  // Animated props for the preview ring rotation (using strokeDashoffset)
+  const animatedRingProps = useAnimatedProps(() => ({
+    strokeDashoffset: dashOffset.value,
   }));
 
-  // Memoize styles
-  const touchAreaStyle = useMemo(() => ({
-    position: 'absolute' as const,
-    width: hitArea,
-    height: hitArea,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    left: dot.x - hitArea / 2,
-    top: dot.y - hitArea / 2,
-  }), [dot.x, dot.y, hitArea]);
+  // Animated props for hover glow
+  const animatedGlowProps = useAnimatedProps(() => ({
+    r: (baseRadius + 12) * scale.value,
+    opacity: interpolate(scale.value, [1, 1.5], [0, 0.3]),
+  }));
 
-  const dotBaseStyle = useMemo(() => ({
-    width: dotSize,
-    height: dotSize,
-    borderRadius: dotSize / 2,
-    backgroundColor: isHovered 
-      ? (previewColor || COLORS.accent.primary)
-      : isSelected 
-        ? COLORS.game.dotActive 
-        : COLORS.game.dot,
-    borderWidth: 2,
-    borderColor: isHovered || isSelected ? (previewColor || COLORS.accent.primary) : COLORS.glass.borderLight,
-    opacity: isInteractive ? 1 : 0.6,
-  }), [dotSize, isSelected, isHovered, isInteractive, previewColor]);
+  // Colors based on state
+  const dotFill = isHovered
+    ? (previewColor || COLORS.accent.primary)
+    : isSelected
+      ? COLORS.game.dotActive
+      : COLORS.game.dot;
 
-  // Preview ring size
-  const ringSize = dotSize + 16;
-  const ringRadius = (ringSize - 3) / 2;
-  const circumference = 2 * Math.PI * ringRadius;
-  const dashLength = circumference / 8;
+  const strokeColor = isHovered || isSelected
+    ? (previewColor || COLORS.accent.primary)
+    : COLORS.glass.borderLight;
+
+  const dotOpacity = isInteractive ? 1 : 0.6;
 
   return (
-    <Pressable
-      onPress={handlePress}
-      disabled={!isInteractive}
-      style={touchAreaStyle}
-      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-    >
-      {/* Rotating preview ring */}
-      {isPreview && !isHovered && (
-        <AnimatedView 
-          style={[
-            styles.previewRingContainer,
-            { width: ringSize, height: ringSize },
-            previewRingStyle,
-          ]}
-        >
-          <Svg width={ringSize} height={ringSize}>
-            <Circle
-              cx={ringSize / 2}
-              cy={ringSize / 2}
-              r={ringRadius}
-              stroke={previewColor || COLORS.accent.primary}
-              strokeWidth={3}
-              strokeDasharray={`${dashLength},${dashLength}`}
-              fill="none"
-              opacity={0.7}
-            />
-          </Svg>
-        </AnimatedView>
-      )}
+    <G>
+      {/* Shadow for depth */}
+      <Circle
+        cx={dot.x}
+        cy={dot.y + 2}
+        r={baseRadius}
+        fill="rgba(0,0,0,0.2)"
+      />
 
       {/* Hover glow ring */}
-      {isHovered && (
-        <View 
-          style={[
-            styles.hoverRingContainer,
-            { 
-              width: ringSize + 8, 
-              height: ringSize + 8,
-              borderRadius: (ringSize + 8) / 2,
-              backgroundColor: previewColor || COLORS.accent.primary,
-            },
-          ]}
+      {(isHovered || isSelected) && (
+        <AnimatedCircle
+          cx={dot.x}
+          cy={dot.y}
+          fill={previewColor || COLORS.accent.primary}
+          animatedProps={animatedGlowProps}
         />
       )}
-      
-      {/* Main dot */}
-      <AnimatedView style={dotAnimatedStyle}>
-        <View style={dotBaseStyle} />
-      </AnimatedView>
-    </Pressable>
-  );
-});
 
-const styles = StyleSheet.create({
-  previewRingContainer: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hoverRingContainer: {
-    position: 'absolute',
-    opacity: 0.3,
-  },
+      {/* Rotating preview ring - uses strokeDashoffset animation */}
+      {isPreview && !isHovered && (
+        <AnimatedCircle
+          cx={dot.x}
+          cy={dot.y}
+          r={ringRadius}
+          stroke={previewColor || COLORS.accent.primary}
+          strokeWidth={3}
+          strokeDasharray={`${dashLength},${dashLength}`}
+          fill="none"
+          opacity={0.7}
+          animatedProps={animatedRingProps}
+        />
+      )}
+
+      {/* Main dot with border */}
+      <AnimatedCircle
+        cx={dot.x}
+        cy={dot.y}
+        fill={dotFill}
+        stroke={strokeColor}
+        strokeWidth={2}
+        opacity={dotOpacity}
+        animatedProps={animatedDotProps}
+      />
+    </G>
+  );
 });
 
 export default Dot;

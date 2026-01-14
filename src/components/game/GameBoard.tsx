@@ -314,9 +314,6 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
           },
         ]}
       >
-        {/* Grid pattern background */}
-        <View style={styles.gridPattern} />
-
         {/* SVG Layer */}
         <Svg
           width={boardWidth}
@@ -394,23 +391,21 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
               />
             </>
           )}
-        </Svg>
 
-        {/* Dots Layer */}
-        {scaledDots.map((dot) => (
-          <Dot
-            key={`dot-${dot.id}`}
-            dot={dot}
-            isSelected={activeDotId === dot.id}
-            isPreview={previewDotIds.has(dot.id)}
-            isHovered={dragState.hoveredDot?.id === dot.id}
-            isInteractive={isInteractive}
-            onPress={selectDot}
-            dotSize={dotSize}
-            hitArea={hitArea}
-            previewColor={myPlayer?.color}
-          />
-        ))}
+          {/* Dots Layer (SVG) */}
+          {scaledDots.map((dot) => (
+            <Dot
+              key={`dot-${dot.id}`}
+              dot={dot}
+              isSelected={activeDotId === dot.id}
+              isPreview={previewDotIds.has(dot.id)}
+              isHovered={dragState.hoveredDot?.id === dot.id}
+              isInteractive={isInteractive}
+              dotSize={dotSize}
+              previewColor={myPlayer?.color}
+            />
+          ))}
+        </Svg>
       </View>
     </GestureDetector>
   );
@@ -424,10 +419,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.game.boardBorder,
     overflow: 'hidden',
     position: 'relative',
-  },
-  gridPattern: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.5,
   },
 });
 

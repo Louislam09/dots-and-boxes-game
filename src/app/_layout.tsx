@@ -25,16 +25,16 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppProviders>
+    <SafeAreaProvider>
+      <AppProviders>
           <View style={{ flex: 1, backgroundColor: COLORS.background.primary }}>
             <StatusBar style="light" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
+          <Stack
+            screenOptions={{
+              headerShown: false,
                 contentStyle: { backgroundColor: COLORS.background.primary },
-                animation: 'slide_from_right',
-              }}
+              animation: 'slide_from_right',
+            }}
             >
               {/* Tabs group */}
               <Stack.Screen
@@ -63,9 +63,9 @@ export default function RootLayout() {
               />
               <Stack.Screen name="history" />
             </Stack>
-          </View>
-        </AppProviders>
-      </SafeAreaProvider>
+        </View>
+      </AppProviders>
+    </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
