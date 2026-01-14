@@ -12,3 +12,8 @@ export { GlassCard } from './GlassCard';
 export { GlowButton } from './GlowButton';
 export { AlertModal } from './AlertModal';
 export type { AlertOptions, AlertButton, AlertType } from './AlertModal';
+
+// Create Room components
+export { ArrowSelector } from './ArrowSelector';
+export { PlayerSlot, PlayerSlotsRow } from './PlayerSlot';
+export { SettingsCard } from './SettingsCard';

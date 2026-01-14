@@ -44,7 +44,14 @@ export const roomService = {
         return { success: false, error: 'Failed to generate room code' };
       }
 
-      const maxPlayers = data.gameMode === '1vs1' ? 2 : 3;
+      // Determine max players from data or gameMode
+      let maxPlayers = data.maxPlayers;
+      if (!maxPlayers) {
+        if (data.gameMode === '1vs1') maxPlayers = 2;
+        else if (data.gameMode === '3players') maxPlayers = 3;
+        else maxPlayers = 4;
+      }
+
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
       const room = await pb.collection('rooms').create({
@@ -56,6 +63,10 @@ export const roomService = {
         status: 'waiting',
         players: [user.id],
         expiresAt: expiresAt.toISOString(),
+        // Game settings
+        boardRows: data.boardRows,
+        boardCols: data.boardCols,
+        theme: data.theme,
       });
 
       return {

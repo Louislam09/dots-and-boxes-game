@@ -18,6 +18,10 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
   const { gameState, selectedDot, isMyTurn, selectDot, myPlayer, edges } = useGame();
   const { width: screenWidth } = useWindowDimensions();
 
+  // Get grid dimensions from game state or defaults
+  const gridRows = gameState?.gridRows || GAME_CONFIG.GRID_SIZE;
+  const gridCols = gameState?.gridCols || GAME_CONFIG.GRID_SIZE;
+
   // Calculate board size - use full width if no prop provided
   const size = propSize || screenWidth - 32;
 
@@ -27,8 +31,15 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
     [screenWidth]
   );
 
-  const { GRID_SIZE, BOARD_PADDING } = GAME_CONFIG;
-  const spacing = (size - BOARD_PADDING * 2) / (GRID_SIZE - 1);
+  const { BOARD_PADDING } = GAME_CONFIG;
+
+  // Calculate spacing based on the larger dimension to fit the board
+  const maxDimension = Math.max(gridRows, gridCols);
+  const spacing = (size - BOARD_PADDING * 2) / (maxDimension - 1);
+
+  // Calculate actual board dimensions based on grid size
+  const boardWidth = BOARD_PADDING * 2 + (gridCols - 1) * spacing;
+  const boardHeight = BOARD_PADDING * 2 + (gridRows - 1) * spacing;
 
   // Recalculate dot positions based on actual render size
   const scaledDots = useMemo(() => {
@@ -58,7 +69,7 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
     const { row, col, connectedTo } = scaledSelectedDot;
     const previews: { row: number; col: number; dir: 'H' | 'V' }[] = [];
 
-    // Check all 4 directions directly
+    // Check all 4 directions directly using dynamic grid size
     const checks = [
       { r: row - 1, c: col, dir: 'V' as const, edgeRow: row - 1, edgeCol: col },     // top
       { r: row + 1, c: col, dir: 'V' as const, edgeRow: row, edgeCol: col },         // bottom
@@ -67,8 +78,9 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
     ];
 
     for (const { r, c, dir, edgeRow, edgeCol } of checks) {
-      if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
-        const id = r * GRID_SIZE + c;
+      // Use dynamic grid bounds
+      if (r >= 0 && r < gridRows && c >= 0 && c < gridCols) {
+        const id = r * gridCols + c;
         // Check both connectedTo AND edgeSet to handle race conditions
         const edgeKey = `${dir}-${edgeRow}-${edgeCol}`;
         if (!connectedTo.includes(id) && !edgeSet.has(edgeKey)) {
@@ -78,7 +90,7 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
     }
 
     return previews;
-  }, [scaledSelectedDot, GRID_SIZE, edgeSet]);
+  }, [scaledSelectedDot, gridRows, gridCols, edgeSet]);
 
   if (!gameState) {
     return (
@@ -102,8 +114,9 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
       style={[
         styles.container,
         {
-          width: size,
-          height: size,
+          width: boardWidth,
+          height: boardHeight,
+          alignSelf: 'center',
         },
       ]}
     >
@@ -112,8 +125,8 @@ export const GameBoard = memo(function GameBoard({ size: propSize }: GameBoardPr
 
       {/* SVG Layer for lines and squares */}
       <Svg
-        width={size}
-        height={size}
+        width={boardWidth}
+        height={boardHeight}
         style={StyleSheet.absoluteFill}
       >
         {/* Completed squares */}

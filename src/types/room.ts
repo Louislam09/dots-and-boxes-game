@@ -1,6 +1,6 @@
 // types/room.ts - Room types
 
-import type { GameMode } from './game';
+import type { GameMode, BoardTheme } from './game';
 
 export type RoomStatus = 'waiting' | 'playing' | 'finished' | 'cancelled';
 
@@ -15,11 +15,19 @@ export interface Room {
   players: string[];
   createdAt: string;
   expiresAt: string;
+  // Game settings
+  boardRows?: number;
+  boardCols?: number;
+  theme?: BoardTheme;
 }
 
 export interface CreateRoomData {
   name?: string;
   gameMode: GameMode;
+  maxPlayers?: number;
+  boardRows?: number;
+  boardCols?: number;
+  theme?: BoardTheme;
 }
 
 export interface JoinRoomData {

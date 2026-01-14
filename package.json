@@ -27,6 +27,7 @@
     "expo-router": "~6.0.0",
     "expo-secure-store": "^15.0.7",
     "expo-splash-screen": "~31.0.8",
+    "expo-sqlite": "^16.0.10",
     "expo-status-bar": "~3.0.7",
     "nativewind": "5.0.0-preview.2",
     "pocketbase": "^0.26.4",
@@ -41,7 +42,8 @@
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.5.1",
     "socket.io-client": "^4.8.1",
-    "tailwindcss": "^4.1.17"
+    "tailwindcss": "^4.1.17",
+    "tinybase": "^7.3.1"
   },
   "devDependencies": {
     "@types/react": "~19.1.10",

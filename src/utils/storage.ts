@@ -111,7 +111,7 @@ export const storage = {
 export interface ActiveRoomData {
   roomCode: string;
   roomId: string;
-  gameMode: '1vs1' | '3players';
+  gameMode: '1vs1' | '3players' | '4players';
   status: 'waiting' | 'playing';
   savedAt: string;
 }

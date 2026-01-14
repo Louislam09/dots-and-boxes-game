@@ -1,21 +1,26 @@
-// server/socket-server/src/game/logic.ts - Game logic
+// server/socket-server/src/game/logic.ts - Game logic with dynamic grid size
 
 import type { Dot, Square, Line, GameState, Player } from '../types/index.js';
 
-const GRID_SIZE = 9;
-const PLAYER_COLORS = ['#E63946', '#2A9D8F', '#E9C46A'];
+// Default grid size (for backwards compatibility)
+const DEFAULT_GRID_SIZE = 9;
+const PLAYER_COLORS = ['#E63946', '#2A9D8F', '#E9C46A', '#A855F7'];
 
 /**
  * Initialize board with dots and squares
+ * Now supports dynamic grid sizes!
  */
-export function initializeBoard(): { dots: Dot[]; squares: Square[] } {
+export function initializeBoard(
+  gridRows: number = DEFAULT_GRID_SIZE,
+  gridCols: number = DEFAULT_GRID_SIZE
+): { dots: Dot[]; squares: Square[] } {
   const dots: Dot[] = [];
   const squares: Square[] = [];
 
-  // Create dots
+  // Create dots (gridRows x gridCols)
   let dotId = 0;
-  for (let row = 0; row < GRID_SIZE; row++) {
-    for (let col = 0; col < GRID_SIZE; col++) {
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridCols; col++) {
       dots.push({
         id: dotId++,
         row,
@@ -25,11 +30,11 @@ export function initializeBoard(): { dots: Dot[]; squares: Square[] } {
     }
   }
 
-  // Create squares
+  // Create squares ((gridRows-1) x (gridCols-1))
   let squareId = 0;
-  for (let row = 0; row < GRID_SIZE - 1; row++) {
-    for (let col = 0; col < GRID_SIZE - 1; col++) {
-      const topLeftDotId = row * GRID_SIZE + col;
+  for (let row = 0; row < gridRows - 1; row++) {
+    for (let col = 0; col < gridCols - 1; col++) {
+      const topLeftDotId = row * gridCols + col;
       squares.push({
         id: squareId++,
         topLeftDotId,
@@ -45,7 +50,7 @@ export function initializeBoard(): { dots: Dot[]; squares: Square[] } {
 }
 
 /**
- * Validate a move
+ * Validate a move with dynamic grid size
  */
 export function validateMove(
   gameState: GameState,
@@ -53,7 +58,7 @@ export function validateMove(
   dot2Id: number,
   playerId: string
 ): { valid: boolean; error?: string } {
-  const { dots, currentTurnPlayerId, status } = gameState;
+  const { dots, currentTurnPlayerId, status, gridRows, gridCols } = gameState;
 
   if (status !== 'playing') {
     return { valid: false, error: 'Game is not active' };
@@ -78,6 +83,7 @@ export function validateMove(
     return { valid: false, error: 'Dots already connected' };
   }
 
+  // Use the actual dot row/col for adjacency check
   const isHorizontal = dot1.row === dot2.row && Math.abs(dot1.col - dot2.col) === 1;
   const isVertical = dot1.col === dot2.col && Math.abs(dot1.row - dot2.row) === 1;
 
@@ -89,7 +95,7 @@ export function validateMove(
 }
 
 /**
- * Process a move
+ * Process a move with dynamic grid size
  */
 export function processMove(
   gameState: GameState,
@@ -104,7 +110,7 @@ export function processMove(
   nextPlayerId: string;
   scores: Record<string, number>;
 } {
-  const { dots, squares } = gameState;
+  const { dots, squares, gridCols } = gameState;
 
   // Create line
   const line: Line = {
@@ -119,7 +125,7 @@ export function processMove(
   dots[dot1Id].connectedTo.push(dot2Id);
   dots[dot2Id].connectedTo.push(dot1Id);
 
-  // Check for completed squares
+  // Check for completed squares using dynamic gridCols
   const completedSquares: Square[] = [];
 
   for (const square of squares) {
@@ -127,7 +133,7 @@ export function processMove(
 
     const topLeft = square.topLeftDotId;
     const topRight = topLeft + 1;
-    const bottomLeft = topLeft + GRID_SIZE;
+    const bottomLeft = topLeft + gridCols;
     const bottomRight = bottomLeft + 1;
 
     const checkLine = (d1: number, d2: number, e1: number, e2: number) =>
@@ -192,4 +198,3 @@ export function determineWinner(
 export function getPlayerColor(index: number): string {
   return PLAYER_COLORS[index % PLAYER_COLORS.length];
 }
-

@@ -97,7 +97,7 @@ export default function JoinRoomScreen() {
       const result = await roomService.joinRoom(roomCode);
 
       if (result.success && result.room) {
-        const gm = result.room.gameMode as '1vs1' | '3players';
+        const gm = result.room.gameMode as '1vs1' | '3players' | '4players';
         
         // Save active room for reconnection
         await gameStorage.saveActiveRoom({
@@ -107,8 +107,24 @@ export default function JoinRoomScreen() {
           status: 'waiting',
         });
         
-        initGame(result.room.code, result.room.id, gm);
-        joinRoom(result.room.code, result.room.id, gm, result.room.maxPlayers);
+        // Initialize game with room's board settings
+        initGame(result.room.code, result.room.id, gm, {
+          gridRows: result.room.boardRows || 5,
+          gridCols: result.room.boardCols || 4,
+          theme: result.room.theme,
+        });
+        
+        // Join room with board settings
+        joinRoom({
+          roomCode: result.room.code,
+          roomId: result.room.id,
+          gameMode: gm,
+          maxPlayers: result.room.maxPlayers,
+          gridRows: result.room.boardRows,
+          gridCols: result.room.boardCols,
+          theme: result.room.theme,
+        });
+        
         router.push(`/lobby/${result.room.code}`);
       } else {
         setError(result.error || 'Room not found');

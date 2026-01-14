@@ -1,27 +1,27 @@
 // app/(tabs)/index.tsx - Home tab screen
 
-import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
-  withTiming,
-  withDelay,
   useSharedValue,
+  withDelay,
+  withTiming,
 } from 'react-native-reanimated';
-import { useAuth } from '../../contexts/AuthContext';
-import { useSocket } from '../../contexts/SocketContext';
-import { useGame } from '../../contexts/GameContext';
-import { gameStorage, ActiveRoomData } from '../../utils/storage';
-import { getExperienceToNextLevel } from '../../constants/game';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/colors';
+import { getExperienceToNextLevel } from '../../constants/game';
+import { useAuth } from '../../contexts/AuthContext';
+import { useGame } from '../../contexts/GameContext';
+import { useSocket } from '../../contexts/SocketContext';
+import { ActiveRoomData, gameStorage } from '../../utils/storage';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeTab() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, isLoading } = useAuth();
   const { joinRoom, isConnected } = useSocket();
   const { initGame } = useGame();
   const insets = useSafeAreaInsets();
@@ -33,7 +33,7 @@ export default function HomeTab() {
 
   useEffect(() => {
     contentOpacity.value = withDelay(100, withTiming(1, { duration: 500 }));
-    
+
     // Check for active room on mount
     checkActiveRoom();
   }, []);
@@ -46,10 +46,15 @@ export default function HomeTab() {
   const handleReconnect = async () => {
     if (!activeRoom || !isConnected) return;
 
-    const maxPlayers = activeRoom.gameMode === '3players' ? 3 : 2;
+    const maxPlayers = activeRoom.gameMode === '3players' ? 3 : activeRoom.gameMode === '4players' ? 4 : 2;
     initGame(activeRoom.roomCode, activeRoom.roomId, activeRoom.gameMode);
-    joinRoom(activeRoom.roomCode, activeRoom.roomId, activeRoom.gameMode, maxPlayers);
-    
+    joinRoom({
+      roomCode: activeRoom.roomCode,
+      roomId: activeRoom.roomId,
+      gameMode: activeRoom.gameMode,
+      maxPlayers,
+    });
+
     // Navigate based on status
     if (activeRoom.status === 'playing') {
       router.push(`/game/${activeRoom.roomCode}`);
@@ -67,7 +72,21 @@ export default function HomeTab() {
     opacity: contentOpacity.value,
   }));
 
-  if (!user) return null;
+  // Show loading state while auth is initializing
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.accent.primary} />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    router.replace('/login');
+    return null;
+  }
 
   const expProgress = getExperienceToNextLevel(user.experience);
   const winRate = user.totalGamesPlayed > 0
@@ -218,6 +237,17 @@ export default function HomeTab() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: COLORS.text.muted,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background.primary,

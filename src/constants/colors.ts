@@ -33,6 +33,7 @@ export const COLORS = {
     player1: '#E63946', // Coral Red
     player2: '#2A9D8F', // Teal
     player3: '#E9C46A', // Gold
+    player4: '#A855F7', // Purple
   },
 
   // Status colors
@@ -70,6 +71,7 @@ export const COLORS = {
       player1: 'rgba(230, 57, 70, 0.4)',
       player2: 'rgba(42, 157, 143, 0.4)',
       player3: 'rgba(233, 196, 106, 0.4)',
+      player4: 'rgba(168, 85, 247, 0.4)',
     },
   },
 
@@ -94,12 +96,18 @@ export const COLORS = {
     player1: '#E63946',
     player2: '#2A9D8F',
     player3: '#E9C46A',
+    player4: '#A855F7',
   },
 } as const;
 
 // Helper to get player color by index
 export function getPlayerColor(index: number): string {
-  const colors = [COLORS.players.player1, COLORS.players.player2, COLORS.players.player3];
+  const colors = [
+    COLORS.players.player1, 
+    COLORS.players.player2, 
+    COLORS.players.player3,
+    COLORS.players.player4,
+  ];
   return colors[index % colors.length];
 }
 
@@ -109,12 +117,18 @@ export function getSquareFillColor(index: number): string {
     COLORS.game.square.player1,
     COLORS.game.square.player2,
     COLORS.game.square.player3,
+    COLORS.game.square.player4,
   ];
   return fills[index % fills.length];
 }
 
 // Helper to get glow color by player index
 export function getPlayerGlowColor(index: number): string {
-  const glows = [COLORS.glow.player1, COLORS.glow.player2, COLORS.glow.player3];
+  const glows = [
+    COLORS.glow.player1, 
+    COLORS.glow.player2, 
+    COLORS.glow.player3,
+    COLORS.glow.player4,
+  ];
   return glows[index % glows.length];
 }

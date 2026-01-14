@@ -54,18 +54,26 @@ export interface GameState {
   currentTurnPlayerId: string | null;
   moveCount: number;
   startedAt: string | null;
+  // Dynamic grid settings
+  gridRows: number;
+  gridCols: number;
+  theme?: string;
 }
 
 export interface RoomState {
   code: string;
   roomId: string;
   hostId: string;
-  gameMode: '1vs1' | '3players';
+  gameMode: '1vs1' | '3players' | '4players';
   maxPlayers: number;
   players: Map<string, Player>;
   gameState: GameState | null;
   playAgainRequests: Set<string>;
   lastActivityAt: number;
+  // Dynamic grid settings
+  gridRows: number;
+  gridCols: number;
+  theme?: string;
 }
 
 export interface MoveData {
@@ -73,4 +81,3 @@ export interface MoveData {
   dot1Id: number;
   dot2Id: number;
 }
-

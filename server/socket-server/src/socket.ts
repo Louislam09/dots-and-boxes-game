@@ -1,4 +1,4 @@
-// server/socket-server/src/socket.ts - Socket.io handlers
+// server/socket-server/src/socket.ts - Socket.io handlers with dynamic grid support
 
 import type { Server, Socket } from 'socket.io';
 import PocketBase from 'pocketbase';
@@ -11,6 +11,10 @@ import {
   getPlayerColor,
 } from './game/logic.js';
 import type { RoomState, Player, GameState } from './types/index.js';
+
+// Default grid settings
+const DEFAULT_GRID_ROWS = 5;
+const DEFAULT_GRID_COLS = 4;
 
 // Use your ngrok URL for PocketBase
 const POCKETBASE_URL = process.env.POCKETBASE_URL || 'https://tick-dynamic-trout.ngrok-free.app';
@@ -50,7 +54,15 @@ export function setupSocketHandlers(io: Server) {
 
     // ============ ROOM HANDLERS ============
 
-    socket.on('join-room', async ({ roomCode, roomId, gameMode: clientGameMode, maxPlayers: clientMaxPlayers }) => {
+    socket.on('join-room', async ({
+      roomCode,
+      roomId,
+      gameMode: clientGameMode,
+      maxPlayers: clientMaxPlayers,
+      gridRows: clientGridRows,
+      gridCols: clientGridCols,
+      theme: clientTheme,
+    }) => {
       try {
         let room = rooms.get(roomCode);
 
@@ -65,12 +77,16 @@ export function setupSocketHandlers(io: Server) {
               code: roomCode,
               roomId,
               hostId: pbRoom.owner,
-              gameMode: pbRoom.gameMode as '1vs1' | '3players',
+              gameMode: pbRoom.gameMode as '1vs1' | '3players' | '4players',
               maxPlayers: pbRoom.maxPlayers,
               players: new Map(),
               gameState: null,
               playAgainRequests: new Set(),
               lastActivityAt: Date.now(),
+              // Use PocketBase settings if available, fallback to client settings
+              gridRows: pbRoom.boardRows || clientGridRows || DEFAULT_GRID_ROWS,
+              gridCols: pbRoom.boardCols || clientGridCols || DEFAULT_GRID_COLS,
+              theme: pbRoom.theme || clientTheme,
             };
             rooms.set(roomCode, room);
           } catch (pbError: any) {
@@ -79,7 +95,7 @@ export function setupSocketHandlers(io: Server) {
             // This allows the game to work even if PocketBase has strict API rules
             console.log('Creating room from client data as fallback...');
             const gm = clientGameMode || '1vs1';
-            const mp = clientMaxPlayers || (gm === '3players' ? 3 : 2);
+            const mp = clientMaxPlayers || (gm === '3players' ? 3 : gm === '4players' ? 4 : 2);
             room = {
               code: roomCode,
               roomId,
@@ -90,6 +106,10 @@ export function setupSocketHandlers(io: Server) {
               gameState: null,
               playAgainRequests: new Set(),
               lastActivityAt: Date.now(),
+              // Use client settings or defaults
+              gridRows: clientGridRows || DEFAULT_GRID_ROWS,
+              gridCols: clientGridCols || DEFAULT_GRID_COLS,
+              theme: clientTheme,
             };
             rooms.set(roomCode, room);
           }
@@ -139,14 +159,14 @@ export function setupSocketHandlers(io: Server) {
         // If game is already in progress, send full game state to the joining player
         if (room.gameState && room.gameState.status === 'playing') {
           console.log(`Game already in progress, sending game state to ${user.displayName}`);
-          
+
           // Send game-started first to transition to playing state
           socket.emit('game-started', {
             players,
             firstPlayerId: room.gameState.currentTurnPlayerId,
           });
-          
-          // Then send the full game state for sync
+
+          // Then send the full game state for sync (including grid settings)
           socket.emit('game-sync', {
             gameState: room.gameState,
             players,
@@ -156,7 +176,7 @@ export function setupSocketHandlers(io: Server) {
           });
         }
 
-        console.log(`${user.displayName} joined room ${roomCode} (${room.players.size}/${room.maxPlayers} players)`);
+        console.log(`${user.displayName} joined room ${roomCode} (${room.players.size}/${room.maxPlayers} players, grid: ${room.gridRows}x${room.gridCols})`);
       } catch (error: any) {
         console.error('Join room error:', error?.message || error);
         socket.emit('error', { message: 'Failed to join room', code: 'JOIN_FAILED' });
@@ -186,8 +206,8 @@ export function setupSocketHandlers(io: Server) {
         return;
       }
 
-      // Initialize game
-      const { dots, squares } = initializeBoard();
+      // Initialize game with room's grid settings
+      const { dots, squares } = initializeBoard(room.gridRows, room.gridCols);
       const players = Array.from(room.players.values());
       const firstPlayerId = players[Math.floor(Math.random() * players.length)].id;
 
@@ -199,12 +219,16 @@ export function setupSocketHandlers(io: Server) {
         currentTurnPlayerId: firstPlayerId,
         moveCount: 0,
         startedAt: new Date().toISOString(),
+        // Include grid settings in game state
+        gridRows: room.gridRows,
+        gridCols: room.gridCols,
+        theme: room.theme,
       };
 
       room.lastActivityAt = Date.now();
 
       io.to(roomCode).emit('game-started', { players, firstPlayerId });
-      console.log(`Game started in room ${roomCode}`);
+      console.log(`Game started in room ${roomCode} (grid: ${room.gridRows}x${room.gridCols})`);
     });
 
     socket.on('make-move', async ({ roomCode, dot1Id, dot2Id }) => {
@@ -232,7 +256,7 @@ export function setupSocketHandlers(io: Server) {
       try {
         const gameState = room.gameState;
 
-        // Validate move
+        // Validate move (now uses grid settings from game state)
         const validation = validateMove(gameState, dot1Id, dot2Id, user.id);
         if (!validation.valid) {
           socket.emit('error', { message: validation.error!, code: 'INVALID_MOVE' });
@@ -310,8 +334,8 @@ export function setupSocketHandlers(io: Server) {
       if (room.playAgainRequests.size >= room.players.size) {
         room.playAgainRequests.clear();
 
-        // Reset game
-        const { dots, squares } = initializeBoard();
+        // Reset game with same grid settings
+        const { dots, squares } = initializeBoard(room.gridRows, room.gridCols);
         const players = Array.from(room.players.values());
         const firstPlayerId = players[Math.floor(Math.random() * players.length)].id;
 
@@ -328,6 +352,9 @@ export function setupSocketHandlers(io: Server) {
           currentTurnPlayerId: firstPlayerId,
           moveCount: 0,
           startedAt: new Date().toISOString(),
+          gridRows: room.gridRows,
+          gridCols: room.gridCols,
+          theme: room.theme,
         };
 
         io.to(roomCode).emit('new-game-starting');
@@ -344,7 +371,7 @@ export function setupSocketHandlers(io: Server) {
       if (room.playAgainRequests.size >= room.players.size) {
         room.playAgainRequests.clear();
 
-        const { dots, squares } = initializeBoard();
+        const { dots, squares } = initializeBoard(room.gridRows, room.gridCols);
         const players = Array.from(room.players.values());
         const firstPlayerId = players[Math.floor(Math.random() * players.length)].id;
 
@@ -360,6 +387,9 @@ export function setupSocketHandlers(io: Server) {
           currentTurnPlayerId: firstPlayerId,
           moveCount: 0,
           startedAt: new Date().toISOString(),
+          gridRows: room.gridRows,
+          gridCols: room.gridCols,
+          theme: room.theme,
         };
 
         io.to(roomCode).emit('new-game-starting');
@@ -530,6 +560,10 @@ async function saveGame(room: RoomState, result: { winner: Player | null; isDraw
       moveHistory: room.gameState?.lines || [],
       startedAt: room.gameState?.startedAt,
       finishedAt: new Date().toISOString(),
+      // Save grid settings
+      gridRows: room.gridRows,
+      gridCols: room.gridCols,
+      theme: room.theme,
     });
 
     // Update player stats
@@ -567,4 +601,3 @@ function cleanupStaleRooms(io: Server) {
     }
   }
 }
-

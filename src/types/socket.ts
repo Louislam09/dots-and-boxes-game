@@ -54,8 +54,11 @@ export interface ClientToServerEvents {
   'join-room': (data: {
     roomCode: string;
     roomId: string;
-    gameMode?: '1vs1' | '3players';
+    gameMode?: '1vs1' | '3players' | '4players';
     maxPlayers?: number;
+    gridRows?: number;
+    gridCols?: number;
+    theme?: string;
   }) => void;
   'leave-room': (data: { roomCode: string }) => void;
   'rejoin-room': (data: { roomCode: string; lastMoveId?: string }) => void;

@@ -53,7 +53,7 @@ export interface Player {
   isConnected: boolean;
 }
 
-export type GameMode = '1vs1' | '3players';
+export type GameMode = '1vs1' | '3players' | '4players';
 export type GameStatus = 'waiting' | 'playing' | 'finished';
 
 export interface GameState {
@@ -70,6 +70,10 @@ export interface GameState {
   isDraw: boolean;
   moveCount: number;
   startedAt: string | null;
+  // Dynamic grid settings
+  gridRows: number;
+  gridCols: number;
+  theme?: BoardTheme;
 }
 
 export interface MoveResult {
@@ -85,5 +89,28 @@ export interface GameOverResult {
   isDraw: boolean;
   finalScores: Record<string, number>;
   reason?: 'completed' | 'opponent_abandoned';
+}
+
+// ============ CREATE ROOM SETTINGS ============
+
+export type PlayMode = 'local' | 'online';
+export type PlayerType = 'human' | 'ai';
+export type AIDifficulty = 'easy' | 'medium' | 'hard';
+export type BoardTheme = 'sunset' | 'ocean' | 'forest' | 'night';
+
+export interface BoardSizeOption {
+  rows: number;
+  cols: number;
+  label: string;
+  category: 'rectangular' | 'square';
+}
+
+export interface GameSettings {
+  playMode: PlayMode;
+  playerCount: number;
+  playerTypes: PlayerType[];
+  aiDifficulty: AIDifficulty;
+  boardSize: BoardSizeOption;
+  theme: BoardTheme;
 }
 

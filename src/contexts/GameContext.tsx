@@ -22,7 +22,14 @@ import type {
   Square,
   Edge,
   GameMode,
+  BoardTheme,
 } from '../types/game';
+
+interface GameSettings {
+  gridRows: number;
+  gridCols: number;
+  theme?: BoardTheme;
+}
 
 interface GameContextValue {
   gameState: GameState | null;
@@ -34,7 +41,7 @@ interface GameContextValue {
   edges: Edge[]; // Edge-based state for fast rendering
 
   // Actions
-  initGame: (roomCode: string, roomId: string, gameMode: GameMode) => void;
+  initGame: (roomCode: string, roomId: string, gameMode: GameMode, settings?: GameSettings) => void;
   selectDot: (dot: Dot) => void;
   clearSelection: () => void;
   resetGame: () => void;
@@ -66,10 +73,19 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
   const myPlayer = gameState?.players.find((p) => p.id === user?.id) ?? null;
   const isMyTurn = gameState?.currentTurnPlayerId === user?.id;
 
-  // Initialize a new game
+  // Initialize a new game with optional settings
   const initGame = useCallback(
-    (roomCode: string, roomId: string, gameMode: GameMode) => {
-      const { dots, squares } = initializeBoard(boardSize);
+    (roomCode: string, roomId: string, gameMode: GameMode, settings?: GameSettings) => {
+      // Use settings or defaults
+      const gridRows = settings?.gridRows || GAME_CONFIG.GRID_SIZE;
+      const gridCols = settings?.gridCols || GAME_CONFIG.GRID_SIZE;
+      const theme = settings?.theme;
+
+      const { dots, squares } = initializeBoard({
+        boardSize,
+        gridRows,
+        gridCols,
+      });
 
       const initialState: GameState = {
         roomCode,
@@ -85,6 +101,9 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
         isDraw: false,
         moveCount: 0,
         startedAt: null,
+        gridRows,
+        gridCols,
+        theme,
       };
 
       setGameState(initialState);
@@ -128,7 +147,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
         // Adjacent dot - check if not already connected
         if (!selectedDot.connectedTo.includes(dot.id)) {
           // === OPTIMISTIC UI: Draw line IMMEDIATELY ===
-          const edgeInfo = dotsToEdge(selectedDot.id, dot.id, myPlayer.id, myPlayer.color);
+          const edgeInfo = dotsToEdge(selectedDot.id, dot.id, myPlayer.id, myPlayer.color, gameState.gridCols);
           const optimisticEdge: Edge = {
             id: edgeInfo.id,
             row: edgeInfo.row,
@@ -187,6 +206,11 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
     setError(null);
     setIsLoading(false);
   }, []);
+
+  // Helper to get grid cols from state or default
+  const getGridCols = useCallback(() => {
+    return gameState?.gridCols || GAME_CONFIG.GRID_SIZE;
+  }, [gameState?.gridCols]);
 
   // Setup socket event listeners
   useEffect(() => {
@@ -260,8 +284,11 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
         nextPlayerId,
         scores,
       }) => {
+        // Get gridCols from current state
+        const gridCols = getGridCols();
+
         // Convert to edge format
-        const edgeInfo = dotsToEdge(dot1Id, dot2Id, playerId, line.color);
+        const edgeInfo = dotsToEdge(dot1Id, dot2Id, playerId, line.color, gridCols);
         const confirmedEdge: Edge = {
           id: edgeInfo.id,
           row: edgeInfo.row,
@@ -313,7 +340,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
               return completed;
             }
             // Check if this line affects this square and update lines
-            return updateSquareLines(square, dot1Id, dot2Id);
+            return updateSquareLines(square, dot1Id, dot2Id, prev.gridCols);
           });
 
           // Update player scores
@@ -357,10 +384,16 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       },
 
       onNewGameStarting: () => {
-        // Reset for new game
-        const { dots, squares } = initializeBoard(boardSize);
+        // Reset for new game - preserve grid settings
         setGameState((prev) => {
           if (!prev) return prev;
+
+          const { dots, squares } = initializeBoard({
+            boardSize,
+            gridRows: prev.gridRows,
+            gridCols: prev.gridCols,
+          });
+
           return {
             ...prev,
             status: 'waiting',
@@ -381,10 +414,13 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
       },
 
       onRejoinSuccess: ({ gameState: serverState, players }) => {
+        // Get gridCols from server state or default
+        const gridCols = serverState.gridCols || GAME_CONFIG.GRID_SIZE;
+
         // Sync edges from server lines on rejoin
         if (serverState.lines && serverState.lines.length > 0) {
           const syncedEdges: Edge[] = serverState.lines.map((line) => {
-            const edgeInfo = dotsToEdge(line.dot1Id, line.dot2Id, line.playerId, line.color);
+            const edgeInfo = dotsToEdge(line.dot1Id, line.dot2Id, line.playerId, line.color, gridCols);
             return {
               id: edgeInfo.id,
               row: edgeInfo.row,
@@ -413,10 +449,13 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
         // Sync game state for late joiners
         console.log('Game sync received:', serverState.status);
 
+        // Get gridCols from server state or default
+        const gridCols = serverState.gridCols || GAME_CONFIG.GRID_SIZE;
+
         // Sync edges from server lines
         if (serverState.lines && serverState.lines.length > 0) {
           const syncedEdges: Edge[] = serverState.lines.map((line) => {
-            const edgeInfo = dotsToEdge(line.dot1Id, line.dot2Id, line.playerId, line.color);
+            const edgeInfo = dotsToEdge(line.dot1Id, line.dot2Id, line.playerId, line.color, gridCols);
             return {
               id: edgeInfo.id,
               row: edgeInfo.row,
@@ -447,6 +486,9 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
             moveCount: serverState.moveCount || 0,
             players: updatedPlayers,
             startedAt: serverState.startedAt,
+            gridRows: serverState.gridRows || prev.gridRows,
+            gridCols: serverState.gridCols || prev.gridCols,
+            theme: serverState.theme || prev.theme,
           };
         });
       },
@@ -466,7 +508,7 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
         console.error('Socket error:', code, message);
       },
     });
-  }, [setEventCallbacks, boardSize, resetGame]);
+  }, [setEventCallbacks, boardSize, resetGame, getGridCols]);
 
   const value: GameContextValue = {
     gameState,
@@ -485,12 +527,11 @@ export function GameProvider({ children, boardSize = 350 }: GameProviderProps) {
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
-// Helper function to update square lines
-function updateSquareLines(square: Square, dot1Id: number, dot2Id: number): Square {
-  const { GRID_SIZE } = GAME_CONFIG;
+// Helper function to update square lines with dynamic grid size
+function updateSquareLines(square: Square, dot1Id: number, dot2Id: number, gridCols: number): Square {
   const topLeft = square.topLeftDotId;
   const topRight = topLeft + 1;
-  const bottomLeft = topLeft + GRID_SIZE;
+  const bottomLeft = topLeft + gridCols;
   const bottomRight = bottomLeft + 1;
 
   const checkLine = (d1: number, d2: number, e1: number, e2: number) =>
@@ -524,4 +565,3 @@ export function useGame(): GameContextValue {
 }
 
 export default GameContext;
-

@@ -12,11 +12,21 @@ import { socketService, SocketEventCallback } from '../services/socket/client';
 import { useAuth } from './AuthContext';
 import type { Player, GameState, Line, Square } from '../types/game';
 
+interface JoinRoomOptions {
+  roomCode: string;
+  roomId: string;
+  gameMode?: '1vs1' | '3players' | '4players';
+  maxPlayers?: number;
+  gridRows?: number;
+  gridCols?: number;
+  theme?: string;
+}
+
 interface SocketContextValue {
   isConnected: boolean;
   connect: () => Promise<boolean>;
   disconnect: () => void;
-  joinRoom: (roomCode: string, roomId: string, gameMode?: '1vs1' | '3players', maxPlayers?: number) => void;
+  joinRoom: (options: JoinRoomOptions) => void;
   leaveRoom: () => void;
   startGame: () => void;
   makeMove: (dot1Id: number, dot2Id: number) => void;
@@ -58,9 +68,9 @@ export function SocketProvider({ children }: SocketProviderProps) {
   }, []);
 
   // Join a room
-  const joinRoom = useCallback((roomCode: string, roomId: string, gameMode?: '1vs1' | '3players', maxPlayers?: number) => {
-    socketService.joinRoom(roomCode, roomId, gameMode, maxPlayers);
-    setCurrentRoomCode(roomCode);
+  const joinRoom = useCallback((options: JoinRoomOptions) => {
+    socketService.joinRoom(options);
+    setCurrentRoomCode(options.roomCode);
   }, []);
 
   // Leave current room

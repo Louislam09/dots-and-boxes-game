@@ -70,7 +70,7 @@ export default function GameScreen() {
       handleLeave();
       return;
     }
-    
+
     confirm(
       'Leave Game?',
       'Are you sure you want to leave? The game is still in progress and you will forfeit.',
@@ -80,15 +80,15 @@ export default function GameScreen() {
 
   const handleLeave = async () => {
     leaveRoom();
-    
+
     // Clear active room on leave
     await gameStorage.clearActiveRoom();
-    
+
     if (gameState?.roomId) {
       await roomService.leaveRoom(gameState.roomId);
     }
-    
-    router.replace('/home');
+
+    router.replace('/');
   };
 
   if (!gameState) {
@@ -115,7 +115,7 @@ export default function GameScreen() {
           >
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          
+
           <View style={styles.roomBadge}>
             <Text style={styles.roomLabel}>Room</Text>
             <Text style={styles.roomCode}>{code}</Text>

@@ -1,4 +1,4 @@
-// services/game/board.ts - Board initialization
+// services/game/board.ts - Board initialization with dynamic grid size
 
 import { GAME_CONFIG } from '../../constants/game';
 import type { Dot, Square } from '../../types/game';
@@ -6,22 +6,43 @@ import type { Dot, Square } from '../../types/game';
 export interface BoardData {
   dots: Dot[];
   squares: Square[];
+  gridRows: number;
+  gridCols: number;
+}
+
+export interface BoardConfig {
+  boardSize: number;    // Pixel size for rendering
+  gridRows?: number;    // Number of dot rows (default: GAME_CONFIG.GRID_SIZE)
+  gridCols?: number;    // Number of dot columns (default: GAME_CONFIG.GRID_SIZE)
 }
 
 /**
  * Initialize the game board with dots and squares
+ * Now supports dynamic grid sizes!
  */
-export function initializeBoard(boardSize: number): BoardData {
-  const { GRID_SIZE, BOARD_PADDING } = GAME_CONFIG;
-  const spacing = (boardSize - BOARD_PADDING * 2) / (GRID_SIZE - 1);
+export function initializeBoard(config: BoardConfig | number): BoardData {
+  // Support legacy call with just boardSize number
+  const boardConfig: BoardConfig = typeof config === 'number'
+    ? { boardSize: config }
+    : config;
+
+  const { boardSize } = boardConfig;
+  const gridRows = boardConfig.gridRows || GAME_CONFIG.GRID_SIZE;
+  const gridCols = boardConfig.gridCols || GAME_CONFIG.GRID_SIZE;
+
+  const { BOARD_PADDING } = GAME_CONFIG;
+
+  // Calculate spacing based on the larger dimension to fit the board
+  const maxDimension = Math.max(gridRows, gridCols);
+  const spacing = (boardSize - BOARD_PADDING * 2) / (maxDimension - 1);
 
   const dots: Dot[] = [];
   const squares: Square[] = [];
 
-  // Create dots (9x9 grid = 81 dots)
+  // Create dots (gridRows x gridCols grid)
   let dotId = 0;
-  for (let row = 0; row < GRID_SIZE; row++) {
-    for (let col = 0; col < GRID_SIZE; col++) {
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridCols; col++) {
       dots.push({
         id: dotId++,
         row,
@@ -33,12 +54,12 @@ export function initializeBoard(boardSize: number): BoardData {
     }
   }
 
-  // Create squares (8x8 grid = 64 squares)
+  // Create squares ((gridRows-1) x (gridCols-1) grid)
   // Each square is defined by its top-left dot
   let squareId = 0;
-  for (let row = 0; row < GRID_SIZE - 1; row++) {
-    for (let col = 0; col < GRID_SIZE - 1; col++) {
-      const topLeftDotId = row * GRID_SIZE + col;
+  for (let row = 0; row < gridRows - 1; row++) {
+    for (let col = 0; col < gridCols - 1; col++) {
+      const topLeftDotId = row * gridCols + col;
       squares.push({
         id: squareId++,
         topLeftDotId,
@@ -55,7 +76,7 @@ export function initializeBoard(boardSize: number): BoardData {
     }
   }
 
-  return { dots, squares };
+  return { dots, squares, gridRows, gridCols };
 }
 
 /**
@@ -64,10 +85,10 @@ export function initializeBoard(boardSize: number): BoardData {
 export function getDotByPosition(
   dots: Dot[],
   row: number,
-  col: number
+  col: number,
+  gridCols: number
 ): Dot | undefined {
-  const { GRID_SIZE } = GAME_CONFIG;
-  const id = row * GRID_SIZE + col;
+  const id = row * gridCols + col;
   return dots[id];
 }
 
@@ -81,31 +102,35 @@ export function getDotById(dots: Dot[], id: number): Dot | undefined {
 /**
  * Get adjacent dots for a given dot
  */
-export function getAdjacentDots(dots: Dot[], dot: Dot): Dot[] {
-  const { GRID_SIZE } = GAME_CONFIG;
+export function getAdjacentDots(
+  dots: Dot[],
+  dot: Dot,
+  gridRows: number,
+  gridCols: number
+): Dot[] {
   const adjacent: Dot[] = [];
 
   // Top
   if (dot.row > 0) {
-    const topDot = getDotByPosition(dots, dot.row - 1, dot.col);
+    const topDot = getDotByPosition(dots, dot.row - 1, dot.col, gridCols);
     if (topDot) adjacent.push(topDot);
   }
 
   // Bottom
-  if (dot.row < GRID_SIZE - 1) {
-    const bottomDot = getDotByPosition(dots, dot.row + 1, dot.col);
+  if (dot.row < gridRows - 1) {
+    const bottomDot = getDotByPosition(dots, dot.row + 1, dot.col, gridCols);
     if (bottomDot) adjacent.push(bottomDot);
   }
 
   // Left
   if (dot.col > 0) {
-    const leftDot = getDotByPosition(dots, dot.row, dot.col - 1);
+    const leftDot = getDotByPosition(dots, dot.row, dot.col - 1, gridCols);
     if (leftDot) adjacent.push(leftDot);
   }
 
   // Right
-  if (dot.col < GRID_SIZE - 1) {
-    const rightDot = getDotByPosition(dots, dot.row, dot.col + 1);
+  if (dot.col < gridCols - 1) {
+    const rightDot = getDotByPosition(dots, dot.row, dot.col + 1, gridCols);
     if (rightDot) adjacent.push(rightDot);
   }
 
@@ -118,15 +143,15 @@ export function getAdjacentDots(dots: Dot[], dot: Dot): Dot[] {
 export function getAffectedSquares(
   squares: Square[],
   dot1Id: number,
-  dot2Id: number
+  dot2Id: number,
+  gridCols: number
 ): Square[] {
-  const { GRID_SIZE } = GAME_CONFIG;
   const affected: Square[] = [];
 
   for (const square of squares) {
     const topLeft = square.topLeftDotId;
     const topRight = topLeft + 1;
-    const bottomLeft = topLeft + GRID_SIZE;
+    const bottomLeft = topLeft + gridCols;
     const bottomRight = bottomLeft + 1;
 
     // Check if the line is part of this square
@@ -165,4 +190,3 @@ export function calculateBoardSize(
 
   return Math.min(availableWidth, availableHeight, maxSize);
 }
-

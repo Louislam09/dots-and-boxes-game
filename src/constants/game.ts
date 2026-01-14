@@ -34,10 +34,11 @@ export const GAME_CONFIG = {
   MAX_PLAYERS: {
     '1vs1': 2,
     '3players': 3,
+    '4players': 4,
   },
 
   // Player colors (matching COLORS.players)
-  PLAYER_COLORS: ['#E63946', '#2A9D8F', '#E9C46A'],
+  PLAYER_COLORS: ['#E63946', '#2A9D8F', '#E9C46A', '#A855F7'],
 
   // Animation durations (ms)
   ANIMATIONS: {
@@ -95,6 +96,74 @@ export const GAME_CONFIG = {
     CHARACTERS: 'ABCDEFGHJKMNPQRSTUVWXYZ23456789',
   },
 } as const;
+
+// ============ BOARD SIZE OPTIONS ============
+
+import type { BoardSizeOption, BoardTheme } from '../types/game';
+
+export const BOARD_SIZES: BoardSizeOption[] = [
+  // Rectangular boards
+  { rows: 3, cols: 4, label: '4 × 3', category: 'rectangular' },
+  { rows: 5, cols: 4, label: '5 × 4', category: 'rectangular' },
+  { rows: 8, cols: 6, label: '8 × 6', category: 'rectangular' },
+  { rows: 11, cols: 9, label: '11 × 9', category: 'rectangular' },
+  // Square boards
+  { rows: 4, cols: 4, label: '4 × 4', category: 'square' },
+  { rows: 5, cols: 5, label: '5 × 5', category: 'square' },
+  { rows: 9, cols: 9, label: '9 × 9', category: 'square' },
+];
+
+export const DEFAULT_BOARD_SIZE = BOARD_SIZES[1]; // 5 × 4
+
+// ============ BOARD THEMES ============
+
+export const BOARD_THEMES: Record<BoardTheme, { 
+  name: string;
+  primary: string; 
+  secondary: string; 
+  board: string;
+  accent: string;
+}> = {
+  sunset: { 
+    name: 'Sunset',
+    primary: '#FF6B6B', 
+    secondary: '#FFE66D', 
+    board: '#FFF5E6',
+    accent: '#FF8E53',
+  },
+  ocean: { 
+    name: 'Ocean',
+    primary: '#4ECDC4', 
+    secondary: '#45B7D1', 
+    board: '#E8F8F5',
+    accent: '#2C98C2',
+  },
+  forest: { 
+    name: 'Forest',
+    primary: '#52B788', 
+    secondary: '#95D5B2', 
+    board: '#E9F5EC',
+    accent: '#40916C',
+  },
+  night: { 
+    name: 'Night',
+    primary: '#6C63FF', 
+    secondary: '#A855F7', 
+    board: '#1A1F3C',
+    accent: '#8B5CF6',
+  },
+};
+
+export const THEME_LIST: BoardTheme[] = ['sunset', 'ocean', 'forest', 'night'];
+export const DEFAULT_THEME: BoardTheme = 'sunset';
+
+// ============ AI DIFFICULTY ============
+
+export const AI_DIFFICULTIES = [
+  { key: 'easy' as const, label: 'Easy', description: 'Random moves' },
+  { key: 'medium' as const, label: 'Medium', description: 'Basic strategy' },
+  { key: 'hard' as const, label: 'Hard', description: 'Advanced tactics' },
+];
 
 // Helper to calculate level from experience
 export function calculateLevel(experience: number): number {
@@ -179,18 +248,18 @@ export function getResponsiveSizes(screenWidth: number): {
 // ============ EDGE UTILITIES ============
 
 // Convert dot pair to edge (canonical form)
+// Now supports dynamic grid size via gridCols parameter
 export function dotsToEdge(
   dot1Id: number,
   dot2Id: number,
   playerId: string,
-  color: string
+  color: string,
+  gridCols: number = GAME_CONFIG.GRID_SIZE // Default for backwards compatibility
 ): { row: number; col: number; dir: 'H' | 'V'; id: string } {
-  const { GRID_SIZE } = GAME_CONFIG;
-  
-  const dot1Row = Math.floor(dot1Id / GRID_SIZE);
-  const dot1Col = dot1Id % GRID_SIZE;
-  const dot2Row = Math.floor(dot2Id / GRID_SIZE);
-  const dot2Col = dot2Id % GRID_SIZE;
+  const dot1Row = Math.floor(dot1Id / gridCols);
+  const dot1Col = dot1Id % gridCols;
+  const dot2Row = Math.floor(dot2Id / gridCols);
+  const dot2Col = dot2Id % gridCols;
   
   // Determine direction and canonical position (top-left of the line)
   if (dot1Row === dot2Row) {
@@ -221,11 +290,14 @@ export function edgeToCoords(
 }
 
 // Get affected square IDs for an edge (max 2 squares, O(1))
+// Now supports dynamic grid size
 export function getEdgeAffectedSquareIds(
-  edge: { row: number; col: number; dir: 'H' | 'V' }
+  edge: { row: number; col: number; dir: 'H' | 'V' },
+  gridRows: number = GAME_CONFIG.GRID_SIZE,
+  gridCols: number = GAME_CONFIG.GRID_SIZE
 ): number[] {
-  const { GRID_SIZE } = GAME_CONFIG;
-  const squaresPerRow = GRID_SIZE - 1;
+  const squaresPerRow = gridCols - 1;
+  const totalSquares = (gridRows - 1) * (gridCols - 1);
   const affectedIds: number[] = [];
   
   if (edge.dir === 'H') {
@@ -234,8 +306,8 @@ export function getEdgeAffectedSquareIds(
     if (edge.row > 0) {
       affectedIds.push((edge.row - 1) * squaresPerRow + edge.col);
     }
-    // Square below: row, col (if row < GRID_SIZE - 1)
-    if (edge.row < GRID_SIZE - 1 && edge.col < squaresPerRow) {
+    // Square below: row, col (if row < gridRows - 1)
+    if (edge.row < gridRows - 1 && edge.col < squaresPerRow) {
       affectedIds.push(edge.row * squaresPerRow + edge.col);
     }
   } else {
@@ -244,13 +316,13 @@ export function getEdgeAffectedSquareIds(
     if (edge.col > 0) {
       affectedIds.push(edge.row * squaresPerRow + (edge.col - 1));
     }
-    // Square right: row, col (if col < GRID_SIZE - 1)
-    if (edge.col < GRID_SIZE - 1 && edge.row < squaresPerRow) {
+    // Square right: row, col (if col < gridCols - 1)
+    if (edge.col < gridCols - 1 && edge.row < gridRows - 1) {
       affectedIds.push(edge.row * squaresPerRow + edge.col);
     }
   }
   
-  return affectedIds.filter(id => id >= 0 && id < GAME_CONFIG.TOTAL_SQUARES);
+  return affectedIds.filter(id => id >= 0 && id < totalSquares);
 }
 
 // Create edge ID from components
